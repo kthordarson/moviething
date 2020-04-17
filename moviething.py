@@ -9,7 +9,7 @@ import sys
 import codecs
 import unidecode
 import argparse
-
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 vid_extensions = (
@@ -75,7 +75,22 @@ class MovieClass(object):
                             print(f'Found imdb link: {result} in {nfo_file.name}')
                         self.imdb_link = result
                         imdbfound = True
+                if not imdbfound and nfo_file.name.endswith('xml'):
+                    # try xml parsin
+                    # print(f'xml parsing {nfo_file.name}')
+                    root = ET.parse(nfo_file.name).getroot()
+                    for k in root.findall('id'):
+                        id = k
+                        if id.text:
+                            imdb_id = id.text
+                            result = 'https://www.imdb.com/title/' + imdb_id
+                            self.imdb_link = result
+                            imdbfound = True
+                            if verbose:
+                                print(f'Found imdb link: {result} in xml {nfo_file.name}')
                 if not imdbfound:
+                    if verbose:
+                        print(f'No imdb info found in {nfo_file.name}')
                     pass
             tend = time.time() - tstart
             if tend >= 3:
@@ -114,8 +129,7 @@ def fix_base_folder(start_dir, file_list):
     for file in file_list:
         if os.path.dirname(file) == start_dir:
             basefilename, extension = os.path.splitext(file)
-            print(
-                f'# Move {file.name} ext {extension} to subfolder {basefilename}')
+            if verbose: print(f'# Move {file.name} ext {extension} to subfolder {basefilename}')
             if not os.path.isdir(basefilename):
                 if not dry_run:
                     os.makedirs(basefilename)
@@ -125,7 +139,7 @@ def fix_base_folder(start_dir, file_list):
 
     # after moving from base folder, rescan and return new list....
     if need_rescan:
-        print(f'Rescan {need_rescan}')
+        if verbose: print(f'Rescan {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
@@ -149,7 +163,7 @@ def fix_foldernames(start_dir, file_list):
                     print(f'Error renaming FOLDER {old_name} to {unicode_path}')
             need_rescan = True
     if need_rescan:
-        print(f'Rescan FOLDERS {need_rescan}')
+        if verbose: print(f'Rescan FOLDERS {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
@@ -171,10 +185,11 @@ def fix_filenames(start_dir, file_list):
                     # need path
                     os.rename(src=old_name, dst=unicode_path)
                 except Exception as e:
-                    print(f'Error renaming FILE {old_name} to {unicode_path}')
+                    print(f'Error renaming FILE {old_name} to {unicode_path} {e}')
             need_rescan = True
     if need_rescan:
-        print(f'Rescan FILELIST {need_rescan}')
+        if verbose:
+            print(f'Rescan FILELIST {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
@@ -193,15 +208,15 @@ def clean_subfolders(folder_list):
         for file in file_list:
             filename = file.name.lower()
             if filename in unwanted_files['txtfiles']:
-                print(f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
+                if verbose: print(f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
             if filename in unwanted_files['images']:
-                print(f'\t{filename} in unwanted images in subdir {search_dir}')
+                if verbose: print(f'\t{filename} in unwanted images in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
             if filename in unwanted_files['videos']:
-                print(f'\t{filename} in unwanted videos in subdir {search_dir}')
+                if verbose: print(f'\t{filename} in unwanted videos in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
 
@@ -262,4 +277,6 @@ if __name__ == '__main__':
     for movie in movie_list:
         if movie.imdb_link is not None:
             imdbcounter += 1
+        else:
+            print(f'Missing imdb for {movie.filename.path}')
     print(f'moviecount: {len(movie_list)} imdblinks {imdbcounter} time {time.time() - t1}')
