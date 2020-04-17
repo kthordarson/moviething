@@ -36,32 +36,51 @@ class MovieClass(object):
         self.imdb_link = None
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
+        tstart = time.time()
         nfofiles = scan_nfo_files(path)
         for nfo in nfofiles:
             # print(f'nfo {nfo.name}')
-            nfo_file = open(nfo, encoding='utf8')
-            nfo_data = nfo_file.readlines()
+            if nfo.name.endswith(valid_nfo_files):
+                try:
+                    nfo_file = open(nfo, encoding='utf8', errors='ignore')
+                    nfo_data = nfo_file.readlines()
+                    nfo_file.close()
+                except Exception as e:
+                    print(f'Error reading nfo {nfo_file.name} {e}')
+                    nfo_file = None
+            else:
+                print(f'Invalid nfo {nfo.path}')
+                nfo_file = None
+                
+            
             # print(f'Parsing {nfo.name} size {len(nfo_data)}')
-            nfo_file.close()
-            imdbfound = False
-            if nfo_file.name.endswith('nfo'):
-                regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
-            elif nfo_file.name.endswith('xml'):
-                # regex for kodi/xbmc/xml (?:<IMDB>)(tt\d{7})(?:<\/IMDB>)
-                regex = re.compile(r"(?:<IMDB>)(tt\d{7})(?:<\/IMDB>)")
+            if nfo_file is not None:
+                imdbfound = False
+                if nfo_file.name.endswith('nfo'):
+                    regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+                elif nfo_file.name.endswith('xml'):
+                    # regex for kodi/xbmc/xml (?:<IMDB>)(tt\d{7})(?:<\/IMDB>)
+                    regex = re.compile(r"(?:<IMDB>)(tt\d{7})(?:<\/IMDB>)")
+                else:
+                    regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
 
-            for line in nfo_data:
-                match = re.search(regex, line)
-                if match:
-                    if nfo_file.name.endswith('nfo'):
-                        result = match[0]
-                    elif nfo_file.name.endswith('xml'):
-                        result = 'https://www.imdb.com/title/' + match[1]
-                    print(f'Found imdb link: {result} in {nfo.name}')
-                    self.imdb_link = result
-                    imdbfound = True
-            if not imdbfound:
-                print(f'No imdb link found in {nfo_file.name}')
+                for line in nfo_data:
+                    match = re.search(regex, line)
+                    if match:
+                        if nfo_file.name.endswith('nfo'):
+                            result = match[0]
+                        elif nfo_file.name.endswith('xml'):
+                            result = 'https://www.imdb.com/title/' + match[1]
+                        if verbose:
+                            print(f'Found imdb link: {result} in {nfo_file.name}')
+                        self.imdb_link = result
+                        imdbfound = True
+                if not imdbfound:
+                    pass
+            tend = time.time() - tstart
+            if tend >= 3:
+                print(f'time {tend} {nfo_file.name}')
+                    # print(f'No imdb link found in {nfo_file.name}')
             # print(f'Parsed {linenum} lines')
         # pass
 
@@ -112,33 +131,50 @@ def fix_base_folder(start_dir, file_list):
             file_list.append(entry)
     return file_list
 
-def fix_filenames(file_list):
+def fix_foldernames(start_dir, file_list):
     # rename files and folders with non-ASCII characters
-    print(f'fix_filenames')
+    print(f'fix_foldernames')
+    need_rescan = False
     for file in file_list:
         # get a clean ASCII name
         unicode_path = unidecode.unidecode(os.path.dirname(file.path))
+        old_name = os.path.dirname(file.path)
+        if old_name != unicode_path:
+            if verbose:
+                print(f'Rename FOLDER {old_name} to {unicode_path}')
+            if not dry_run:
+                try:
+                    os.rename(src=old_name, dst=unicode_path)
+                except Exception as e:
+                    print(f'Error renaming FOLDER {old_name} to {unicode_path}')
+            need_rescan = True
+    if need_rescan:
+        print(f'Rescan FOLDERS {need_rescan}')
+        file_list = []
+        for entry in scantree(start_dir):
+            file_list.append(entry)
+    return file_list
+
+def fix_filenames(start_dir, file_list):
+    # rename files and folders with non-ASCII characters
+    print(f'fix_filenames')
+    need_rescan = False
+    for file in file_list:
+        # get a clean ASCII name
+        unicode_path = unidecode.unidecode(file.path)
         old_name = file.path
         if old_name != unicode_path:
-            print(f'Rename {os.path.dirname(old_name)} to {unicode_path}')
+            if verbose:
+                print(f'Rename FILE {old_name} to {unicode_path}')
             if not dry_run:
-                os.rename(src=old_name, dst=unicode_path)
-                need_rescan = True
-                
-
-        # if file.path != unicode_path:
-        #     # print(f'Need to rename {file.path} to {unicode_path}')
-        #     # filename has some strange characters - fix and rename            
-        #     if not dry_run:
-        #         try:
-        #             os.rename(src=os.path.normpath(file), dst=os.path.normpath(unicode_path))
-        #             need_rescan = True
-        #             print(f'Renamed {file.path} to {unicode_path}')
-        #         except Exception as e:
-        #             print(f'Error renaming {file.path} to {unicode_path} {e}')
-            
+                try:
+                    # need path
+                    os.rename(src=old_name, dst=unicode_path)
+                except Exception as e:
+                    print(f'Error renaming FILE {old_name} to {unicode_path}')
+            need_rescan = True
     if need_rescan:
-        print(f'Rescan {need_rescan}')
+        print(f'Rescan FILELIST {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
@@ -185,8 +221,10 @@ def normalscan(start_dir):
         file_list.append(entry)
     # move movies in base folder to subfolders...
     file_list = fix_base_folder(start_dir, file_list)
+    # fix non-ascii foldernames
+    file_list = fix_foldernames(start_dir, file_list)
     # fix non-ascii filenames
-    file_list = fix_filenames(file_list)
+    file_list = fix_filenames(start_dir, file_list)
     # clean subfolders of unwanted extra files
     clean_subfolders(file_list)
     return file_list
@@ -195,6 +233,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="moviething")
     parser.add_argument("--path",nargs="?",default="d:/movies",help="Base movie folder",required=True,action="store",)
     parser.add_argument("--dryrun", action="store_true", help="Dry run - no changes to filesystem")
+    parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args =  parser.parse_args()
     if args.path:
         print(f'Basedir: {args.path}')
@@ -205,6 +244,10 @@ if __name__ == '__main__':
     else:
         print(f'Dry run: {args.dryrun}')
         dry_run = False
+    if args.verbose:
+        verbose = True
+    else:
+        verbose = False
     t1 = time.time()
     # base movie folder
     # each movie should reside in it's own subfolder - not in basemovie_dir
@@ -213,6 +256,10 @@ if __name__ == '__main__':
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)
+#    for movie in movie_list:
+#        print(f'{movie.filename.name} {movie.imdb_link}')
+    imdbcounter = 0
     for movie in movie_list:
-        print(f'{movie.filename.name} {movie.imdb_link}')
-    print(f'moviecount: {len(movie_list)} time {time.time() - t1}')
+        if movie.imdb_link is not None:
+            imdbcounter += 1
+    print(f'moviecount: {len(movie_list)} imdblinks {imdbcounter} time {time.time() - t1}')
