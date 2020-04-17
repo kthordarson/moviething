@@ -8,6 +8,8 @@ import platform
 import sys
 import codecs
 import unidecode
+import argparse
+
 from pathlib import Path
 
 vid_extensions = (
@@ -96,9 +98,11 @@ def fix_base_folder(start_dir, file_list):
             print(
                 f'# Move {file.name} ext {extension} to subfolder {basefilename}')
             if not os.path.isdir(basefilename):
-                os.makedirs(basefilename)
+                if not dry_run:
+                    os.makedirs(basefilename)
             need_rescan = True
-            os.rename(src=file, dst=basefilename + '/' + file.name)
+            if not dry_run:
+                os.rename(src=file, dst=basefilename + '/' + file.name)
 
     # after moving from base folder, rescan and return new list....
     if need_rescan:
@@ -109,18 +113,35 @@ def fix_base_folder(start_dir, file_list):
     return file_list
 
 def fix_filenames(file_list):
-    # rename files with non-ASCII characters
+    # rename files and folders with non-ASCII characters
     print(f'fix_filenames')
     for file in file_list:
-        unicode_name = unidecode.unidecode(file.name)
         # get a clean ASCII name
-        if file.name != unicode_name:
-            # filename has some strange characters - fix and rename
-            newname = os.path.dirname(file) + '/' + unicode_name
-            os.rename(src=file, dst=newname)
-            print(f'# Renamed - result {newname}')
-            unicode_name = newname
-#        print(f'{unicode_name}')
+        unicode_path = unidecode.unidecode(os.path.dirname(file.path))
+        old_name = file.path
+        if old_name != unicode_path:
+            print(f'Rename {os.path.dirname(old_name)} to {unicode_path}')
+            if not dry_run:
+                os.rename(src=old_name, dst=unicode_path)
+                need_rescan = True
+                
+
+        # if file.path != unicode_path:
+        #     # print(f'Need to rename {file.path} to {unicode_path}')
+        #     # filename has some strange characters - fix and rename            
+        #     if not dry_run:
+        #         try:
+        #             os.rename(src=os.path.normpath(file), dst=os.path.normpath(unicode_path))
+        #             need_rescan = True
+        #             print(f'Renamed {file.path} to {unicode_path}')
+        #         except Exception as e:
+        #             print(f'Error renaming {file.path} to {unicode_path} {e}')
+            
+    if need_rescan:
+        print(f'Rescan {need_rescan}')
+        file_list = []
+        for entry in scantree(start_dir):
+            file_list.append(entry)
     return file_list
 
 def clean_subfolders(folder_list):
@@ -137,13 +158,16 @@ def clean_subfolders(folder_list):
             filename = file.name.lower()
             if filename in unwanted_files['txtfiles']:
                 print(f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
-                os.remove(file)
+                if not dry_run:
+                    os.remove(file)
             if filename in unwanted_files['images']:
                 print(f'\t{filename} in unwanted images in subdir {search_dir}')
-                os.remove(file)
+                if not dry_run:
+                    os.remove(file)
             if filename in unwanted_files['videos']:
                 print(f'\t{filename} in unwanted videos in subdir {search_dir}')
-                os.remove(file)
+                if not dry_run:
+                    os.remove(file)
 
 def populate_movielist(file_list):
     print('populate_movielist')
@@ -168,11 +192,24 @@ def normalscan(start_dir):
     return file_list
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="moviething")
+    parser.add_argument("--path",nargs="?",default="d:/movies",help="Base movie folder",required=True,action="store",)
+    parser.add_argument("--dryrun", action="store_true", help="Dry run - no changes to filesystem")
+    args =  parser.parse_args()
+    if args.path:
+        print(f'Basedir: {args.path}')
+        basemovie_dir = args.path
+    if args.dryrun:
+        print(f'Dry run: {args.dryrun}')
+        dry_run = True
+    else:
+        print(f'Dry run: {args.dryrun}')
+        dry_run = False
     t1 = time.time()
     # base movie folder
     # each movie should reside in it's own subfolder - not in basemovie_dir
     # structure <drive>:/<movie base dir>/<movie title>
-    basemovie_dir = 'd:/movies'
+    
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)
