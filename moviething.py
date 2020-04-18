@@ -1,4 +1,11 @@
 # moviething
+# todo
+# rename files to match movie title
+# check subtitles, dl missing
+# gather information about video codec / quality
+# delete samples files
+# extract movie info from nfo/xml files
+
 import os
 import re
 import time
@@ -21,19 +28,23 @@ min_filesize = 40000000
 # unwanted files / subdirs
 # will be deleted automatically
 unwanted_files = dict(
-    subdirs = ("sample", "samples"),
-    txtfiles = ("readme.txt", "torrent downloaded from extratorrent.cc.txt", "rarbg.com.txt", "torrent-downloaded-from-extratorrent.cc.txt", "ahashare.com.txt", "torrent downloaded from demonoid.com - copy.txt", "torrent downloaded from demonoid.com.txt"),
-    images = ("www.yify-torrents.com.jpg", "screenshot", "www.yts.am.jpg"),
-    videos = ("rarbg.com.mp4", "sample.mkv")
+    subdirs=("sample", "samples"),
+    txtfiles=("readme.txt", "torrent downloaded from extratorrent.cc.txt", "rarbg.com.txt", "torrent-downloaded-from-extratorrent.cc.txt",
+              "ahashare.com.txt", "torrent downloaded from demonoid.com - copy.txt", "torrent downloaded from demonoid.com.txt"),
+    images=("www.yify-torrents.com.jpg", "screenshot", "www.yts.am.jpg"),
+    videos=("rarbg.com.mp4", "sample.mkv")
 )
 
 valid_nfo_files = ('nfo', 'xml')
 
+
 class MovieClass(object):
-    def __init__ (self, filename):
+    def __init__(self, filename):
         self.filename = filename
         self.path = os.path.dirname(filename)
         self.imdb_link = None
+        self.nfo_file_count = 0
+
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
         tstart = time.time()
@@ -48,36 +59,24 @@ class MovieClass(object):
                 except Exception as e:
                     print(f'Error reading nfo {nfo_file.name} {e}')
                     nfo_file = None
+                    break
             else:
+                # todo fix this.... sometimes files with other extensions show up....
                 print(f'Invalid nfo {nfo.path}')
                 nfo_file = None
-                
-            
+                break
+            # todo clean up
             # print(f'Parsing {nfo.name} size {len(nfo_data)}')
             if nfo_file is not None:
+                self.nfo_file_count += 1
                 imdbfound = False
                 if nfo_file.name.endswith('nfo'):
-                    regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+                    regex = re.compile(
+                        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
                 elif nfo_file.name.endswith('xml'):
                     # regex for kodi/xbmc/xml (?:<IMDB>)(tt\d{7})(?:<\/IMDB>)
-                    regex = re.compile(r"(?:<IMDB>)(tt\d{7})(?:<\/IMDB>)")
-                else:
-                    regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
-
-                for line in nfo_data:
-                    match = re.search(regex, line)
-                    if match:
-                        if nfo_file.name.endswith('nfo'):
-                            result = match[0]
-                        elif nfo_file.name.endswith('xml'):
-                            result = 'https://www.imdb.com/title/' + match[1]
-                        if verbose:
-                            print(f'Found imdb link: {result} in {nfo_file.name}')
-                        self.imdb_link = result
-                        imdbfound = True
-                if not imdbfound and nfo_file.name.endswith('xml'):
-                    # try xml parsin
-                    # print(f'xml parsing {nfo_file.name}')
+                    # regex = re.compile(r"(?:<IMDB>)(tt\d{7})(?:<\/IMDB>)")
+                    # match = re.search(regex, line)
                     root = ET.parse(nfo_file.name).getroot()
                     for k in root.findall('id'):
                         id = k
@@ -87,19 +86,42 @@ class MovieClass(object):
                             self.imdb_link = result
                             imdbfound = True
                             if verbose:
-                                print(f'Found imdb link: {result} in xml {nfo_file.name}')
+                                print(
+                                    f'Found imdb link: {result} in xml {nfo_file.name}')
+                        else:
+                            if verbose:
+                                print(
+                                    f'Unable to parse XML {nfo_file.name} {id}')
+#                            result = 'https://www.imdb.com/title/' + match[1]
+                else:
+                    # todo check this....
+                    regex = re.compile(
+                        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+                if nfo_file.name.endswith('nfo'):
+                    for line in nfo_data:  # and nfo_file.name.endswith('nfo'):
+                        match = re.search(regex, line)
+                        if match:
+                            result = match[0]
+                            if verbose:
+                                print(
+                                    f'Found imdb link: {result} in {nfo_file.name}')
+                            self.imdb_link = result
+                            imdbfound = True
+
                 if not imdbfound:
                     if verbose:
                         print(f'No imdb info found in {nfo_file.name}')
                     pass
             tend = time.time() - tstart
-            if tend >= 3:
+            if tend >= 1 and verbose:  # just for debugging stuff
                 print(f'time {tend} {nfo_file.name}')
-                    # print(f'No imdb link found in {nfo_file.name}')
+                # print(f'No imdb link found in {nfo_file.name}')
             # print(f'Parsed {linenum} lines')
         # pass
 
+
 def scan_nfo_files(path):
+    # scan given path for valid nfo/xml files containing movie info
     for entry in os.scandir(path):
         if entry.is_dir(follow_symlinks=False):
             yield from scantree(entry.path)
@@ -107,7 +129,10 @@ def scan_nfo_files(path):
             if entry.name.endswith(valid_nfo_files):
                 yield entry
 
+
 def scantree(path):
+    # scan given path for movies with valid extensions and larger than min_filesize
+    # todo validate video files
     for entry in os.scandir(path):
         if entry.is_dir(follow_symlinks=False):
             yield from scantree(entry.path)
@@ -115,21 +140,27 @@ def scantree(path):
             if entry.name.endswith(vid_extensions) and entry.stat().st_size > min_filesize:
                 yield entry
 
+
 def scan_subdir(path):
+    # return all files from given path
     for entry in os.scandir(path):
         if entry.is_dir(follow_symlinks=False):
             yield from scantree(entry.path)
         else:
             yield entry
 
+
 def fix_base_folder(start_dir, file_list):
-    # move files from base folder to subdir
+    # move files from base folder to subdir named like the movie files without extension
+    # todo subfolder naming format <movietitle (year)>. Example "Goodfellas (1990)"
     print(f'fix_base_folder')
     need_rescan = False
     for file in file_list:
         if os.path.dirname(file) == start_dir:
             basefilename, extension = os.path.splitext(file)
-            if verbose: print(f'# Move {file.name} ext {extension} to subfolder {basefilename}')
+            if verbose:
+                print(
+                    f'# Move {file.name} ext {extension} to subfolder {basefilename}')
             if not os.path.isdir(basefilename):
                 if not dry_run:
                     os.makedirs(basefilename)
@@ -139,14 +170,19 @@ def fix_base_folder(start_dir, file_list):
 
     # after moving from base folder, rescan and return new list....
     if need_rescan:
-        if verbose: print(f'Rescan {need_rescan}')
+        if verbose:
+            print(f'Rescan {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
     return file_list
 
+
 def fix_foldernames(start_dir, file_list):
     # rename files and folders with non-ASCII characters
+    # todo cleanup foldername, remove scene tags from foldername. Example:
+    # Before "Bone.Tomahawk.2015.720p.WEB-DL.DD5.1.H264-RARBG"
+    # After  "Bone Tomahawk (2015)"
     print(f'fix_foldernames')
     need_rescan = False
     for file in file_list:
@@ -160,17 +196,23 @@ def fix_foldernames(start_dir, file_list):
                 try:
                     os.rename(src=old_name, dst=unicode_path)
                 except Exception as e:
-                    print(f'Error renaming FOLDER {old_name} to {unicode_path}')
+                    print(
+                        f'Error renaming FOLDER {old_name} to {unicode_path} {e}')
             need_rescan = True
     if need_rescan:
-        if verbose: print(f'Rescan FOLDERS {need_rescan}')
+        if verbose:
+            print(f'Rescan FOLDERS {need_rescan}')
         file_list = []
         for entry in scantree(start_dir):
             file_list.append(entry)
     return file_list
 
+
 def fix_filenames(start_dir, file_list):
     # rename files and folders with non-ASCII characters
+    # todo cleanup filesname, remove scene tags from filename. Example:
+    # Before "Bone.Tomahawk.2015.720p.WEB-DL.DD5.1.H264-RARBG.mkv"
+    # After  "Bone Tomahawk (2015).mkv"
     print(f'fix_filenames')
     need_rescan = False
     for file in file_list:
@@ -182,10 +224,10 @@ def fix_filenames(start_dir, file_list):
                 print(f'Rename FILE {old_name} to {unicode_path}')
             if not dry_run:
                 try:
-                    # need path
                     os.rename(src=old_name, dst=unicode_path)
                 except Exception as e:
-                    print(f'Error renaming FILE {old_name} to {unicode_path} {e}')
+                    print(
+                        f'Error renaming FILE {old_name} to {unicode_path} {e}')
             need_rescan = True
     if need_rescan:
         if verbose:
@@ -195,11 +237,12 @@ def fix_filenames(start_dir, file_list):
             file_list.append(entry)
     return file_list
 
+
 def clean_subfolders(folder_list):
     # clean unwanted files from movie folders
     print('clean_subfolders')
     for subdir in folder_list:
-        #are we in a subdir
+        # are we in a subdir
         search_dir = os.path.dirname(subdir.path)
         if os.path.isdir(search_dir):
             file_list = []
@@ -208,30 +251,44 @@ def clean_subfolders(folder_list):
         for file in file_list:
             filename = file.name.lower()
             if filename in unwanted_files['txtfiles']:
-                if verbose: print(f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
+                if verbose:
+                    print(
+                        f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
             if filename in unwanted_files['images']:
-                if verbose: print(f'\t{filename} in unwanted images in subdir {search_dir}')
+                if verbose:
+                    print(
+                        f'\t{filename} in unwanted images in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
             if filename in unwanted_files['videos']:
-                if verbose: print(f'\t{filename} in unwanted videos in subdir {search_dir}')
+                if verbose:
+                    print(
+                        f'\t{filename} in unwanted videos in subdir {search_dir}')
                 if not dry_run:
                     os.remove(file)
+            if file.path.lower() in unwanted_files['subdirs']:
+                # if verbose:
+                print(f'\t{filename} in unwanted {search_dir}')
+                if not dry_run:
+                    print(f'TODO Removing subdir {filename}')
+                    # os.remove(file)
+
 
 def populate_movielist(file_list):
     print('populate_movielist')
     movie_list = []
     for file in file_list:
-        movie = MovieClass(filename = file)
+        movie = MovieClass(filename=file)
         movie.scan_nfo(movie.path)
         movie_list.append(movie)
     return movie_list
 
+
 def normalscan(start_dir):
     file_list = []
-    #populate movie list from base folder...
+    # populate movie list from base folder...
     for entry in scantree(start_dir):
         file_list.append(entry)
     # move movies in base folder to subfolders...
@@ -244,12 +301,16 @@ def normalscan(start_dir):
     clean_subfolders(file_list)
     return file_list
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="moviething")
-    parser.add_argument("--path",nargs="?",default="d:/movies",help="Base movie folder",required=True,action="store",)
-    parser.add_argument("--dryrun", action="store_true", help="Dry run - no changes to filesystem")
-    parser.add_argument("--verbose", action="store_true", help="Verbose output")
-    args =  parser.parse_args()
+    parser.add_argument("--path", nargs="?", default="d:/movies",
+                        help="Base movie folder", required=True, action="store",)
+    parser.add_argument("--dryrun", action="store_true",
+                        help="Dry run - no changes to filesystem")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Verbose output")
+    args = parser.parse_args()
     if args.path:
         print(f'Basedir: {args.path}')
         basemovie_dir = args.path
@@ -267,7 +328,7 @@ if __name__ == '__main__':
     # base movie folder
     # each movie should reside in it's own subfolder - not in basemovie_dir
     # structure <drive>:/<movie base dir>/<movie title>
-    
+
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)
@@ -279,4 +340,7 @@ if __name__ == '__main__':
             imdbcounter += 1
         else:
             print(f'Missing imdb for {movie.filename.path}')
-    print(f'moviecount: {len(movie_list)} imdblinks {imdbcounter} time {time.time() - t1}')
+#        if movie.nfo_file_count > 1:
+#            print(f'{movie.filename.path} has multiple {movie.nfo_file_count} nfo/xml files')
+    print(
+        f'moviecount: {len(movie_list)} imdblinks {imdbcounter} time {time.time() - t1}')
