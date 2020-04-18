@@ -18,7 +18,8 @@ import unidecode
 import argparse
 import xml.etree.ElementTree as ET
 from pathlib import Path
-
+from xmlparser import get_xml_dict
+import difflib
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
 )
@@ -41,84 +42,78 @@ valid_nfo_files = ('nfo', 'xml')
 class MovieClass(object):
     def __init__(self, filename):
         self.filename = filename
+        self.basename, self.extension = os.path.splitext(filename)
         self.path = os.path.dirname(filename)
         self.imdb_link = None
         self.nfo_file_count = 0
+        self.nfo_files = []
 
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
         tstart = time.time()
         nfofiles = scan_nfo_files(path)
         for nfo in nfofiles:
-            # print(f'nfo {nfo.name}')
-            if nfo.name.endswith(valid_nfo_files):
+            if nfo.name.endswith('xml'):
                 try:
-                    nfo_file = open(nfo, encoding='utf8', errors='ignore')
-                    nfo_data = nfo_file.readlines()
-                    nfo_file.close()
+                    xml_data = get_xml_dict(nfo)
+                    self.xml_data = xml_data
+                    self.nfo_file_count += 1
+                    self.nfo_files.append(nfo)
                 except Exception as e:
-                    print(f'Error reading nfo {nfo_file.name} {e}')
-                    nfo_file = None
-                    break
-            else:
-                # todo fix this.... sometimes files with other extensions show up....
-                print(f'Invalid nfo {nfo.path}')
-                nfo_file = None
-                break
-            # todo clean up
-            # print(f'Parsing {nfo.name} size {len(nfo_data)}')
-            if nfo_file is not None:
-                self.nfo_file_count += 1
-                imdbfound = False
-                if nfo_file.name.endswith('nfo'):
-                    regex = re.compile(
-                        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
-                elif nfo_file.name.endswith('xml'):
-                    # regex for kodi/xbmc/xml (?:<IMDB>)(tt\d{7})(?:<\/IMDB>)
-                    # regex = re.compile(r"(?:<IMDB>)(tt\d{7})(?:<\/IMDB>)")
-                    # match = re.search(regex, line)
-                    root = ET.parse(nfo_file.name).getroot()
-                    for k in root.findall('id'):
-                        id = k
-                        if id.text:
-                            imdb_id = id.text
-                            result = 'https://www.imdb.com/title/' + imdb_id
-                            self.imdb_link = result
-                            imdbfound = True
-                            if verbose:
-                                print(
-                                    f'Found imdb link: {result} in xml {nfo_file.name}')
-                        else:
-                            if verbose:
-                                print(
-                                    f'Unable to parse XML {nfo_file.name} {id}')
-#                            result = 'https://www.imdb.com/title/' + match[1]
-                else:
-                    # todo check this....
-                    regex = re.compile(
-                        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
-                if nfo_file.name.endswith('nfo'):
-                    for line in nfo_data:  # and nfo_file.name.endswith('nfo'):
-                        match = re.search(regex, line)
-                        if match:
-                            result = match[0]
-                            if verbose:
-                                print(
-                                    f'Found imdb link: {result} in {nfo_file.name}')
-                            self.imdb_link = result
-                            imdbfound = True
-
-                if not imdbfound:
+                    print(f'Error parsing XML {nfo.name} {e}')
+                    xml_data = None
+            
+    def populate_info(self):
+        # gather info to ensure correct folder/filenames
+        if self.xml_data is not None:
+            print(f'self populate from xml data {self.nfo_files}')
+            self.imdb_id = self.xml_data.get('id', None) #self.xml_data['id']
+            if self.imdb_id is not None:
+                try:
+                    self.imdb_link = 'https://www.imdb.com/title/' + self.imdb_id
+                except Exception as e:
+                    print(f'xml err {self.filename.name} {self.nfo_files} {self.imdb_id} {e}')
+                    exit(-1)
+            self.title = self.xml_data.get('title', None) # self.xml_data['title']
+            self.year =self.xml_data.get('year', None) # self.xml_data['year']
+            if self.title is not None and self.year is not None:
+                self.correct_pathname = self.title + ' (' + self.year + ')'
+                self.correct_filename = self.correct_pathname + self.extension
+                self.rename_required = False
+                if self.correct_pathname != os.path.basename(self.path):
+                    self.rename_required = True
                     if verbose:
-                        print(f'No imdb info found in {nfo_file.name}')
-                    pass
-            tend = time.time() - tstart
-            if tend >= 1 and verbose:  # just for debugging stuff
-                print(f'time {tend} {nfo_file.name}')
-                # print(f'No imdb link found in {nfo_file.name}')
-            # print(f'Parsed {linenum} lines')
-        # pass
-
+                        print(show_diff(self.correct_pathname, os.path.basename(self.path)))
+                if self.correct_filename != self.filename.name:
+                    self.rename_required = True
+                    if verbose:
+                        print(show_diff(self.correct_filename, self.filename.name))
+                # todo check if actual path/filename matches correct names gathered from nfo/xml and correct if needed
+        else:
+            print('got no data')
+                
+def show_diff(text, n_text):
+    """
+    http://stackoverflow.com/a/788780
+    Unify operations between two compared strings seqm is a difflib.
+    SequenceMatcher instance whose a & b are strings
+    """
+    seqm = difflib.SequenceMatcher(None, text, n_text)
+    output= []
+    for opcode, a0, a1, b0, b1 in seqm.get_opcodes():
+        if opcode == 'equal':
+            output.append(seqm.a[a0:a1])
+        elif opcode == 'insert':
+            output.append("^" + seqm.b[b0:b1] + "")
+        elif opcode == 'delete':
+            output.append("^" + seqm.a[a0:a1] + "")
+        elif opcode == 'replace':
+            # seqm.a[a0:a1] -> seqm.b[b0:b1]
+            output.append("^" + seqm.b[b0:b1] + "")
+        else:
+            pass
+            # raise RuntimeError, "unexpected opcode"
+    return ''.join(output)
 
 def scan_nfo_files(path):
     # scan given path for valid nfo/xml files containing movie info
@@ -282,6 +277,7 @@ def populate_movielist(file_list):
     for file in file_list:
         movie = MovieClass(filename=file)
         movie.scan_nfo(movie.path)
+        movie.populate_info()
         movie_list.append(movie)
     return movie_list
 
@@ -334,13 +330,7 @@ if __name__ == '__main__':
     movie_list = populate_movielist(file_list)
 #    for movie in movie_list:
 #        print(f'{movie.filename.name} {movie.imdb_link}')
-    imdbcounter = 0
-    for movie in movie_list:
-        if movie.imdb_link is not None:
-            imdbcounter += 1
-        else:
-            print(f'Missing imdb for {movie.filename.path}')
 #        if movie.nfo_file_count > 1:
 #            print(f'{movie.filename.path} has multiple {movie.nfo_file_count} nfo/xml files')
     print(
-        f'moviecount: {len(movie_list)} imdblinks {imdbcounter} time {time.time() - t1}')
+        f'moviecount: {len(movie_list)} time {time.time() - t1}')
