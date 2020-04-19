@@ -13,6 +13,7 @@ languages = {
     "en": "English",
 }
 
+
 def get_hash(name):
     readsize = 64 * 1024
     with open(name, 'rb') as f:
@@ -41,12 +42,14 @@ def request_subtitile(film_hash):
         print(f"Error {req.status_code}")
         return False
 
+
 def write_srt(data, file):
     filename = Path(file).with_suffix('.srt')
     with open(filename, 'wb') as f:
         f.write(data)
     f.close()
     print(f'Saved subtitle {filename}')
+
 
 def thesubdb_grabber():
     files = []
@@ -65,4 +68,3 @@ def thesubdb_grabber():
                 write_srt(req.content,  file)
             else:
                 print(f"Error {req.status_code}")
-

@@ -1,21 +1,28 @@
 # nfo parser
 # read and parse nfo files, return valid info
-import os
+# import argparse
+# import codecs
+# import hashlib
+# import os
+# import platform
 import re
-import time
-import hashlib
-import requests
-import platform
-import sys
-import codecs
-import unidecode
-import argparse
+# import sys
+# import time
 import xml.etree.ElementTree as ET
-from pathlib import Path
 from collections import defaultdict
+# from pathlib import Path
 
-mediainfo_tags = ['Audio Bit rate', 'Audio Bit rate mode', 'Audio Channel positions', 'Audio Channel(s)', 'Audio Channel(s)_Original', 'Audio Codec ID', 'Audio Compression mode', 'Audio Duration', 'Audio Encoded date', 'Audio Format', 'Audio Format profile', 'Audio Format/Info', 'Audio ID', 'Audio Language', 'Audio Sampling rate', 'Audio Stream size', 'Audio Tagged date', 'Video Bit depth', 'Video Bit rate', 'Video Bits/(Pixel*Frame)', 'Video Chroma subsampling',
-                  'Video Codec ID', 'Video Codec ID/Info', 'Video Color space', 'Video Display aspect ratio', 'Video Duration', 'Video Encoded date', 'Video Encoding settings', 'Video Format', 'Video Format profile', 'Video Format settings, CABAC', 'Video Format settings, ReFrames', 'Video Format/Info', 'Video Frame rate', 'Video Frame rate mode', 'Video Height', 'Video ID', 'Video Scan type', 'Video Stream size', 'Video Tagged date', 'Video Width', 'Video Writing library']
+# import requests
+# import unidecode
+
+mediainfo_tags = [
+    'Audio Bit rate', 'Audio Bit rate mode', 'Audio Channel positions', 'Audio Channel(s)', 'Audio Channel(s)_Original',
+    'Audio Codec ID', 'Audio Compression mode', 'Audio Duration', 'Audio Encoded date', 'Audio Format', 'Audio Format profile',
+    'Audio Format/Info', 'Audio ID', 'Audio Language', 'Audio Sampling rate', 'Audio Stream size', 'Audio Tagged date', 'Video Bit depth',
+    'Video Bit rate', 'Video Bits/(Pixel*Frame)', 'Video Chroma subsampling', 'Video Codec ID', 'Video Codec ID/Info', 'Video Color space',
+    'Video Display aspect ratio', 'Video Duration', 'Video Encoded date', 'Video Encoding settings', 'Video Format', 'Video Format profile',
+    'Video Format settings, CABAC', 'Video Format settings, ReFrames', 'Video Format/Info', 'Video Frame rate', 'Video Frame rate mode',
+    'Video Height', 'Video ID', 'Video Scan type', 'Video Stream size', 'Video Tagged date', 'Video Width', 'Video Writing library']
 
 
 class hashabledict(dict):
@@ -45,30 +52,30 @@ class XMLCombiner(object):
         from `other` if not found.
         """
         # Create a mapping from tag name to element, as that's what we are fltering with
-        #mapping = {el.tag: el for el in one}
+        # mapping = {el.tag: el for el in one}
         mapping = {(el.tag, hashabledict(el.attrib)): el for el in one}
         for el in other:
             if len(el) == 0:
                 # Not nested
                 try:
                     # Update the text
-                    #mapping[el.tag].text = el.text
+                    # mapping[el.tag].text = el.text
                     mapping[(el.tag, hashabledict(el.attrib))].text = el.text
                 except KeyError:
                     # An element with this name is not in the mapping
                     mapping[(el.tag, hashabledict(el.attrib))] = el
-                    #mapping[el.tag] = el
+                    # mapping[el.tag] = el
                     # Add it
                     one.append(el)
             else:
                 try:
                     # Recursively process the element, and update it in the same way
-                    #self.combine_element(mapping[el.tag], el)
+                    # self.combine_element(mapping[el.tag], el)
                     self.combine_element(
                         mapping[(el.tag, hashabledict(el.attrib))], el)
                 except KeyError:
                     # Not in the mapping
-                    #mapping[el.tag] = el
+                    # mapping[el.tag] = el
                     mapping[(el.tag, hashabledict(el.attrib))] = el
                     # Just add it
                     one.append(el)
@@ -80,7 +87,8 @@ def get_nfo_data(file):
     nfo_raw = nfo_file.readlines()
     regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
     mediacheck_mi_1 = False
-    check_mi_2 = False
+    mediacheck_mi_2 = False
+    # check_mi_2 = False
     is_mediainfofile = False
     imdb_link = None
     for line in nfo_raw:
@@ -92,9 +100,9 @@ def get_nfo_data(file):
             mediacheck_mi_1 = True
             # print('check_mi_2diainfo start tag')
         if '[/mediainfo]' in line:
-            mediacheck2 = True
+            mediacheck_mi_2 = True
             # print('mediainfo end tag')
-        if mediacheck_mi_1 and mediacheck2:
+        if mediacheck_mi_1 and mediacheck_mi_2:
             # found check_mi_2ening and closing mediainfo tags... probably valid info...
             is_mediainfofile = True
             # print('Valid mediainfo')
@@ -112,8 +120,8 @@ def get_nfo_data(file):
 
 
 def extract_mediainfo_tags(file):
-    tags = None
-    nfo_data = None
+    # tags = None
+    # nfo_data = None
     nfo_file = open(file, encoding='utf-8', errors='ignore')
     nfo_raw = nfo_file.readlines()
     mediainfo = False
@@ -142,14 +150,14 @@ def extract_mediainfo_tags(file):
             # print('menu')
             # print(line)
         if mediainfo and (videopart or audiopart):
-            #line = line.strip()
+            # line = line.strip()
             if ':' in line:
                 tag, value = line.split(':', maxsplit=1)
                 tag = part_tag + ' ' + tag.strip()
                 value = value.strip()
                 tag_list[tag] = value
-                #print(f'{part_tag} tag: {tag}  ---- {value}')
-    #tags = sorted(set(tag_list))
+                # print(f'{part_tag} tag: {tag}  ---- {value}')
+    # tags = sorted(set(tag_list))
     return tag_list
 
 
@@ -175,8 +183,8 @@ def is_valid_txt(file):
 def is_valid_nfo(file):
     # check if given nfo file contains extractable info, return False if not
     # regex for nfo containing mediainfo
-    regex_mi_1 = '\[mediainfo\]'
-    regex_mi_2 = '\[\/mediainfo\]'
+    regex_mi_1 = r'\[mediainfo\]'
+    regex_mi_2 = r'\[\/mediainfo\]'
     # regex to find imdb link
     regex_imdb = re.compile(
         r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
@@ -192,7 +200,7 @@ def is_valid_nfo(file):
     if data is not None:
         check_mi_1 = re.findall(regex_mi_1, data)
         check_mi_2 = re.findall(regex_mi_2, data)
-        if len(check_mi_1)+len(check_mi_2) == 2:
+        if len(check_mi_1) + len(check_mi_2) == 2:
             # contains valid mediainfo, return True
             return True
         check_imdb = re.findall(regex_imdb, data)
@@ -282,7 +290,7 @@ def read_xml(file):
     # todo validate xml before returning imcomplete data....
     data = None
     xml_file = open(file, encoding='utf-8', errors='ignore')
-    xml_data = xml_file.readlines()
+    # xml_data = xml_file.readlines()
     xml_file.close()
     root = ET.parse(file).getroot()
     children = list(root)
@@ -308,7 +316,7 @@ def get_xml_config(file):
 def get_valid_tags(file):
     valid_tags = []
     xml_file = open(file, encoding='utf-8', errors='ignore')
-    xml_data = xml_file.read()
+    # xml_data = xml_file.read()
     xml_file.close()
     root = ET.parse(file).getroot()
     for ch in list(root):
@@ -319,49 +327,15 @@ def get_valid_tags(file):
 
 def is_valid_xml(file):
     try:
-        xml_file = open(file, encoding='utf-8', errors='ignore')
-        xml_data = xml_file.read()
-        xml_file.close()
+        # xml_file = open(file, encoding='utf-8', errors='ignore')
+        # xml_data = xml_file.read()
+        # xml_file.close()
         root = ET.parse(file).getroot()
+        print(root)
         return True
     except Exception as e:
         print(f'Invalid XML {file} {e}')
         return False
-
-
-def xml_merge(file1, file2, result_file):
-    # todo finish
-    # if root.tag == 'movie' - use as source
-    # if root.tag == 'title' - copy....
-    # resulting xml will have same filename as movie file and title
-    # if more than one xml, keep only new xml from merge
-
-    result_file = None
-    xmlfile1 = open(file1, encoding='utf-8', errors='ignore')
-    xmldata1 = xmlfile1.read()
-    xmlfile1.close()
-
-    xmlfile2 = open(file2, encoding='utf-8', errors='ignore')
-    xmldata2 = xmlfile2.read()
-    xmlfile2.close()
-
-    root1 = ET.parse(file1).getroot()
-    root1a = ET.parse(file1)
-    root2 = ET.parse(file2).getroot()
-    root3 = ET.Element('movie')
-    for ch in list(root1):
-        root3.append(ch)
-
-    for ch in list(root2):
-        print(ch.tag)
-        print(root3.find(ch.tag))
-        if root3.find(ch.tag) is None:
-            root3.append(ch)
-
-    root = ET.ElementTree(element=root3)
-    root.write('oldstuff/' + result_file)
-
-    return True
 
 
 def merge_nfo_files(files):
@@ -370,9 +344,9 @@ def merge_nfo_files(files):
 
 
 if __name__ == '__main__':
-    #file = 'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.nfo'
+    # file = 'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.nfo'
     # file = 'd:/movies/[AnimeRG] Laputa Castle in the Sky (1986) [MULTI-AUDIO] [1080p] [x265] [pseudo]/torrent.nfo'
-    #file = 'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.nfo'
+    # file = 'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.nfo'
     files = (
         # parsable
         'o:/Movies/Movies/Barbie The Pearl Princess (2013)/Barbie The Pearl Princess (2014).orig.nfo',
@@ -388,11 +362,11 @@ if __name__ == '__main__':
 
     )
     files = ('o:/Movies/Movies/9 Songs (2004)/9 Songs cd2.orig.txt',)
-    # merge_files = ('c:/Users/kthor/Documents/development/moviething/oldstuff/movie.xml', 'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml', 'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One 2012.xml')
-    # r = XMLCombiner(merge_files).combine()
-    # result = ET.ElementTree(element=r.getroot())
-    # print(type(result))
-
-    # result.write('oldstuff/out2.xml')
-
-    # merge_test(merge_files, 'oldstuff/out.xml')
+    merge_files = (
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/movie.xml',
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml',
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One 2012.xml')
+    r = XMLCombiner(merge_files).combine()
+    result = ET.ElementTree(element=r.getroot())
+    print(type(result))
+    result.write('oldstuff/out2.xml')

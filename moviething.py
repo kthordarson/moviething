@@ -7,22 +7,24 @@
 # extract movie info from nfo/xml files
 # in case of multiple nfo/xml merge into one
 import argparse
-import codecs
-import hashlib
+# import codecs
+# import hashlib
 import os
-import platform
-import re
+# import platform
+# import re
 import string
-import sys
+# import sys
 import time
 import unicodedata
-import xml.etree.ElementTree as ET
-from pathlib import Path
-import time
-import requests
+# import xml.etree.ElementTree as ET
+# from pathlib import Path
+
+# import requests
 import unidecode
 
-from nfoparser import get_nfo_data, is_valid_nfo, get_xml_dict, etree_to_dict, get_xml_data, is_valid_xml, is_valid_txt, merge_nfo_files
+from nfoparser import (
+    get_nfo_data, get_xml_data, is_valid_nfo,
+    is_valid_txt, is_valid_xml, merge_nfo_files)
 
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
@@ -78,7 +80,7 @@ class MovieClass(object):
 
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
-        tstart = time.time()
+        # tstart = time.time()
         nfofiles = scan_nfo_files(path)
         for nfo in nfofiles:
             if nfo.name.endswith('xml'):
@@ -86,14 +88,14 @@ class MovieClass(object):
                     xml_data = get_xml_data(nfo)
                     movie_data = xml_data.get(
                         'movie') or xml_data.get('Title', None)
-                    #xml_data = etree_to_dict(nfo)
+                    # xml_data = etree_to_dict(nfo)
                     self.xml_data = movie_data
                     # self.nfo_file_count += 1
                     self.nfo_files.append(nfo)
                 except Exception as e:
                     print(f'Error parsing XML {nfo.path} {e}')
                     exit(-1)
-                    #xml_data = None
+                    # xml_data = None
             if nfo.name.endswith('nfo'):
                 try:
                     nfo_data = get_nfo_data(nfo)
@@ -118,7 +120,7 @@ class MovieClass(object):
         if self.xml_data is not None:
             if verbose:
                 pass
-                #print(f'Gathering xml data {self.filename.name} {self.nfo_files}')
+                # print(f'Gathering xml data {self.filename.name} {self.nfo_files}')
             self.imdb_id = self.xml_data.get('id', None)  # self.xml_data['id']
             if self.imdb_id is None:
                 self.imdb_id = self.xml_data.get('IMDbId', None)
@@ -158,7 +160,7 @@ class MovieClass(object):
 
         else:
             pass
-            #print(f'No nfo/xml data for {self.filename.name}')
+            # print(f'No nfo/xml data for {self.filename.name}')
 
     def rename_movie_path(self):
         if verbose:
@@ -171,7 +173,7 @@ class MovieClass(object):
                     self.path) + '/' + self.correct_pathname
                 os.rename(src=src_path, dst=dst_path)
                 self.rename_path_required = False
-                #self.filename.path = dst_path
+                # self.filename.path = dst_path
             except Exception as e:
                 print(f'Rename path failed {e}')
 
@@ -188,9 +190,9 @@ class MovieClass(object):
                 dst_file = os.path.dirname(
                     self.basename) + '/' + self.correct_filename
                 os.rename(src=src_file, dst=dst_file)
-                #self.filename.name = dst_file
+                # self.filename.name = dst_file
                 self.rename_file_required = False
-            except AttributeError:
+            except AttributeError as e:
                 print(f'Rename err {e}')
 
             except Exception as e:
@@ -378,7 +380,7 @@ def check_nfo_files(file_list):
         print(f'Scanning NFO/XML/TXT for {file.path}')
         nfolist = scan_nfo_files(os.path.dirname(file.path))
         nfocounter = 0
-        merge_needed = False
+        # merge_needed = False
         files_to_merge = []
         for nfo in nfolist:
             nfocounter += 1
@@ -422,9 +424,9 @@ def check_nfo_files(file_list):
                 else:
                     files_to_merge.append(nfo)
         if nfocounter > 1:
-            #print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
-            #print(f'Merging files ... {files_to_merge}')
-            merge_needed = True
+            # print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
+            # print(f'Merging files ... {files_to_merge}')
+            # merge_needed = True
             merge_nfo_files(files_to_merge)
     exit(-1)
 
