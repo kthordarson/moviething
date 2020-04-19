@@ -3,7 +3,7 @@
 # import argparse
 # import codecs
 # import hashlib
-# import os
+import os
 # import platform
 import re
 # import sys
@@ -340,6 +340,26 @@ def is_valid_xml(file):
 
 def merge_nfo_files(files):
     # merger...
+    # todo fix output filename
+    r = XMLCombiner(files).combine()
+    result = ET.ElementTree(element=r.getroot())
+    title = result.find('title')
+    year = result.find('year')
+    xml_out = 'oldstuff/' + title.text + ' (' + year.text + ') temp.xml'
+    print(f'title: {title.text} year: {year.text} --- saving result as: {xml_out}')
+    result.write(xml_out, xml_declaration=True, encoding='utf-8')
+
+    # todo rename / delete old files
+    for file in files:
+        new_name = file + '.oldnfo'
+        try:
+            os.rename(src=file, dst=new_name)
+            print(f'file: {file} renamed to {new_name}')
+        except Exception as e:
+            print(f'Rename {file} failed {e}')
+            return False
+    final_xml = 'oldstuff/' + title.text + ' (' + year.text + ').xml'
+    os.rename(src=xml_out, dst=final_xml)
     return True
 
 
@@ -366,7 +386,4 @@ if __name__ == '__main__':
         'c:/Users/kthor/Documents/development/moviething/oldstuff/movie.xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One 2012.xml')
-    r = XMLCombiner(merge_files).combine()
-    result = ET.ElementTree(element=r.getroot())
-    print(type(result))
-    result.write('oldstuff/out2.xml')
+    merge_nfo_files(merge_files)
