@@ -18,12 +18,11 @@ import time
 import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
-
+import time
 import requests
 import unidecode
 
-from xmlparser import get_xml_dict, etree_to_dict, get_xml_data
-from nfoparser import get_nfo_data
+from nfoparser import get_nfo_data, is_valid_nfo, get_xml_dict, etree_to_dict, get_xml_data, is_valid_xml, is_valid_txt, merge_nfo_files
 
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
@@ -44,7 +43,7 @@ unwanted_files = dict(
     videos=("rarbg.com.mp4", "sample.mkv")
 )
 
-valid_nfo_files = ('nfo', 'xml')
+valid_nfo_files = ('nfo', 'xml', 'txt')
 
 def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
     # replace spaces
@@ -73,6 +72,7 @@ class MovieClass(object):
         self.rename_file_required = False
         self.rename_path_required = False
 
+
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
         tstart = time.time()
@@ -84,7 +84,7 @@ class MovieClass(object):
                     movie_data = xml_data.get('movie') or xml_data.get('Title', None)
                     #xml_data = etree_to_dict(nfo)
                     self.xml_data = movie_data
-                    self.nfo_file_count += 1
+                    # self.nfo_file_count += 1
                     self.nfo_files.append(nfo)
                 except Exception as e:
                     print(f'Error parsing XML {nfo.path} {e}')
@@ -98,7 +98,7 @@ class MovieClass(object):
                         # print(f'Got nfo {type(nfo_data)} {len(nfo_data)}')
                     if nfo_data is not None:
                         self.nfo_data = nfo_data
-                        self.nfo_file_count += 1
+                        # self.nfo_file_count += 1
                         self.nfo_files.append(nfo)
                     if nfo_data is None:
                         print(f'No NFO data extracted from {nfo.path}')
@@ -350,6 +350,66 @@ def populate_movielist(file_list):
         movie_list.append(movie)
     return movie_list
 
+def check_nfo_files(file_list):
+    # todo
+    # scan path for multiple / invalid nfo / xml files
+    # merge into one valid xml
+    # delete remaining nfo / xml
+    invalid_file_counter = 0
+    invalid_files = []
+    for file in file_list:
+        print(f'Scanning NFO/XML/TXT for {file.path}')
+        nfolist = scan_nfo_files(os.path.dirname(file.path))
+        nfocounter = 0
+        merge_needed = False
+        files_to_merge = []
+        for nfo in nfolist:
+            nfocounter += 1
+            if nfo.name.endswith('nfo'):
+                if not is_valid_nfo(nfo):
+                    # not valid files, delete
+                    # todo delete, rename for now...
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid NFO {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        os.rename(src=nfo, dst=new_name)
+                    #pass
+                else:
+                    files_to_merge.append(nfo)
+            if nfo.name.endswith('xml'):
+                if not is_valid_xml(nfo):
+                    # not valid xml, delete
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid NFO {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        os.rename(src=nfo, dst=new_name)
+                else:
+                    files_to_merge.append(nfo)
+                    
+            if nfo.name.endswith('txt'):
+                if not is_valid_txt(nfo):
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid txt {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        os.rename(src=nfo, dst=new_name)
+                    # no imdb link/id found in txt, discard...
+                else:
+                    files_to_merge.append(nfo)
+        if nfocounter > 1:
+            #print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
+            #print(f'Merging files ... {files_to_merge}')
+            merge_needed = True
+            merge_nfo_files(files_to_merge)
+    exit(-1)
 
 def normalscan(start_dir):
     file_list = []
@@ -365,6 +425,8 @@ def normalscan(start_dir):
     file_list = fix_filenames(start_dir, file_list)
     # clean subfolders of unwanted extra files
     clean_subfolders(file_list)
+    # check for multiple nfo/xml and merge into one file
+    check_nfo_files(file_list)
     return file_list
 
 
