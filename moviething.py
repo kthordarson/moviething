@@ -45,19 +45,23 @@ unwanted_files = dict(
 
 valid_nfo_files = ('nfo', 'xml', 'txt')
 
+
 def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
     # replace spaces
     for r in replace:
-        input_string = input_string.replace(r,'_')
-    
+        input_string = input_string.replace(r, '_')
+
     # keep only valid ascii chars
-    cleaned_input_string = unicodedata.normalize('NFKD', input_string).encode('ASCII', 'ignore').decode()
-    
+    cleaned_input_string = unicodedata.normalize(
+        'NFKD', input_string).encode('ASCII', 'ignore').decode()
+
     # keep only whitelisted chars
-    cleaned_input_string = ''.join(c for c in cleaned_input_string if c in whitelist)
-    if len(cleaned_input_string)>char_limit:
+    cleaned_input_string = ''.join(
+        c for c in cleaned_input_string if c in whitelist)
+    if len(cleaned_input_string) > char_limit:
         print("Warning, input_string truncated because it was over {}. input_strings may no longer be unique".format(char_limit))
     return cleaned_input_string[:char_limit]
+
 
 class MovieClass(object):
     def __init__(self, filename):
@@ -72,7 +76,6 @@ class MovieClass(object):
         self.rename_file_required = False
         self.rename_path_required = False
 
-
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
         tstart = time.time()
@@ -81,7 +84,8 @@ class MovieClass(object):
             if nfo.name.endswith('xml'):
                 try:
                     xml_data = get_xml_data(nfo)
-                    movie_data = xml_data.get('movie') or xml_data.get('Title', None)
+                    movie_data = xml_data.get(
+                        'movie') or xml_data.get('Title', None)
                     #xml_data = etree_to_dict(nfo)
                     self.xml_data = movie_data
                     # self.nfo_file_count += 1
@@ -109,29 +113,33 @@ class MovieClass(object):
                     print(f'Error parsing NFO {nfo.path} {e}')
                     exit(-1)
 
-            
     def populate_info(self):
         # gather info to ensure correct folder/filenames
         if self.xml_data is not None:
             if verbose:
                 pass
                 #print(f'Gathering xml data {self.filename.name} {self.nfo_files}')
-            self.imdb_id = self.xml_data.get('id', None) #self.xml_data['id']
+            self.imdb_id = self.xml_data.get('id', None)  # self.xml_data['id']
             if self.imdb_id is None:
                 self.imdb_id = self.xml_data.get('IMDbId', None)
             if type(self.imdb_id) == list:
                 self.imdb_id = self.imdb_id[0]
             if self.imdb_id is not None:
                 if verbose:
-                    print(f'IMDB found {self.imdb_id} for {self.filename.name}')
+                    print(
+                        f'IMDB found {self.imdb_id} for {self.filename.name}')
                 self.imdb_link = 'https://www.imdb.com/title/' + self.imdb_id
-            self.title = self.xml_data.get('title', None) # self.xml_data['title']
-            self.year =self.xml_data.get('year', None) # self.xml_data['year']
+            self.title = self.xml_data.get(
+                'title', None)  # self.xml_data['title']
+            self.year = self.xml_data.get(
+                'year', None)  # self.xml_data['year']
             self.rename_file_required = False
             self.rename_path_required = False
-            if self.title is not None and self.year is not None: # and self.imdb_id is not None:
+            # and self.imdb_id is not None:
+            if self.title is not None and self.year is not None:
                 sanatized_title = sanatized_string(self.title)
-                self.correct_pathname = sanatized_title + ' (' + self.year + ')'
+                self.correct_pathname = sanatized_title + \
+                    ' (' + self.year + ')'
                 self.correct_filename = self.correct_pathname + self.extension
                 if self.correct_filename != self.filename.name:
                     self.rename_file_required = True
@@ -142,7 +150,8 @@ class MovieClass(object):
                 # todo check if actual path/filename matches correct names gathered from nfo/xml and correct if needed
         elif self.nfo_data is not None:
             if verbose:
-                print(f'Gathering nfo data {self.filename.name} {self.nfo_files}')
+                print(
+                    f'Gathering nfo data {self.filename.name} {self.nfo_files}')
             self.imdb_link = self.nfo_data['imdb_link']
             if verbose:
                 print(f'imdb link from nfo: {self.imdb_link}')
@@ -150,40 +159,47 @@ class MovieClass(object):
         else:
             pass
             #print(f'No nfo/xml data for {self.filename.name}')
+
     def rename_movie_path(self):
         if verbose:
-            print(f'Folder old: {os.path.basename(self.path)} corr: {self.correct_pathname}')
+            print(
+                f'Folder old: {os.path.basename(self.path)} corr: {self.correct_pathname}')
         if not dry_run and self.rename_path_required:
             try:
                 src_path = os.path.dirname(self.filename.path)
-                dst_path = os.path.dirname(self.path) + '/' + self.correct_pathname
+                dst_path = os.path.dirname(
+                    self.path) + '/' + self.correct_pathname
                 os.rename(src=src_path, dst=dst_path)
                 self.rename_path_required = False
                 #self.filename.path = dst_path
             except Exception as e:
                 print(f'Rename path failed {e}')
-                
-                #exit(-1)
-        #pass
+
+                # exit(-1)
+        # pass
     def rename_movie_file(self):
         if verbose:
-            print(f'Filename old: {self.filename.name} corr: {self.correct_filename} ')
+            print(
+                f'Filename old: {self.filename.name} corr: {self.correct_filename} ')
         if not dry_run and self.rename_file_required:
             try:
-                src_file = os.path.dirname(self.basename) + '/' + self.filename.name
-                dst_file = os.path.dirname(self.basename) + '/' + self.correct_filename
+                src_file = os.path.dirname(
+                    self.basename) + '/' + self.filename.name
+                dst_file = os.path.dirname(
+                    self.basename) + '/' + self.correct_filename
                 os.rename(src=src_file, dst=dst_file)
                 #self.filename.name = dst_file
                 self.rename_file_required = False
             except AttributeError:
                 print(f'Rename err {e}')
-                
+
             except Exception as e:
                 print(f'Rename file failed {e}')
-                
-                #exit(-1)
-        #pass
-                
+
+                # exit(-1)
+        # pass
+
+
 def scan_nfo_files(path):
     # scan given path for valid nfo/xml files containing movie info
     for entry in os.scandir(path):
@@ -350,6 +366,7 @@ def populate_movielist(file_list):
         movie_list.append(movie)
     return movie_list
 
+
 def check_nfo_files(file_list):
     # todo
     # scan path for multiple / invalid nfo / xml files
@@ -376,7 +393,7 @@ def check_nfo_files(file_list):
                     new_name = nfo.path + '.invalid'
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
-                    #pass
+                    # pass
                 else:
                     files_to_merge.append(nfo)
             if nfo.name.endswith('xml'):
@@ -391,7 +408,7 @@ def check_nfo_files(file_list):
                         os.rename(src=nfo, dst=new_name)
                 else:
                     files_to_merge.append(nfo)
-                    
+
             if nfo.name.endswith('txt'):
                 if not is_valid_txt(nfo):
                     invalid_file_counter += 1
@@ -410,6 +427,7 @@ def check_nfo_files(file_list):
             merge_needed = True
             merge_nfo_files(files_to_merge)
     exit(-1)
+
 
 def normalscan(start_dir):
     file_list = []
@@ -460,7 +478,7 @@ if __name__ == '__main__':
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)
-    filerename, folderrename = 0,0
+    filerename, folderrename = 0, 0
     for movie in movie_list:
         if movie.rename_file_required:
             filerename += 1
