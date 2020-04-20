@@ -24,7 +24,7 @@ import unidecode
 from nfoparser import (
     get_nfo_data, get_xml_data, is_valid_nfo,
     is_valid_txt, is_valid_xml, xml_merge_nfo_files, sanatized_string,
-    get_xml_movie_title)
+    get_xml_movie_title, nfo_extractor)
 
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
@@ -62,11 +62,11 @@ class MovieClass(object):
     def scan_nfo(self, path):
         # scan folder containing this movie for valid nfo files
         # tstart = time.time()
-        nfofiles = scan_nfo_files(path)
+        nfofiles = scan_path(path, valid_nfo_files, min_size=1)
         for nfo in nfofiles:
             if nfo.name.endswith('xml'):
                 try:
-                    xml_data = get_xml_data(nfo)
+                    xml_data = get_xml_data(nfo.path)
                     movie_data = xml_data.get(
                         'movie') or xml_data.get('Title', None)
                     # xml_data = etree_to_dict(nfo)
@@ -74,7 +74,7 @@ class MovieClass(object):
                     # self.nfo_file_count += 1
                     self.nfo_files.append(nfo)
                 except Exception as e:
-                    print(f'Error parsing XML {nfo.path} {e}')
+                    print(f'MovieClass Error parsing XML {nfo} {e}')
                     exit(-1)
                     # xml_data = None
             if nfo.name.endswith('nfo'):
@@ -91,9 +91,10 @@ class MovieClass(object):
                         print(f'No NFO data extracted from {nfo.path}')
                         if not dry_run:
                             # todo remove useless nfo file
+                            # todo this should be done before arriving here.....
                             pass
                 except Exception as e:
-                    print(f'Error parsing NFO {nfo.path} {e}')
+                    print(f'scan_nfo: Error parsing NFO {nfo.path} {e}')
                     exit(-1)
 
     def populate_info(self):
@@ -183,34 +184,14 @@ class MovieClass(object):
         # pass
 
 
-def scan_nfo_files(path):
-    # scan given path for valid nfo/xml files containing movie info
+def scan_path(path, extensions, min_size=0):
+    # scan given path for movies with valid extensions and larger than min_size
     for entry in os.scandir(path):
         if entry.is_dir(follow_symlinks=False):
-            yield from scantree(entry.path)
+            yield from scan_path(entry.path, extensions, min_size)
         else:
-            if entry.name.endswith(valid_nfo_files):
+            if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
                 yield entry
-
-
-def scantree(path):
-    # scan given path for movies with valid extensions and larger than min_filesize
-    # todo validate video files
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            yield from scantree(entry.path)
-        else:
-            if entry.name.endswith(vid_extensions) and entry.stat().st_size > min_filesize:
-                yield entry
-
-
-def scan_subdir(path):
-    # return all files from given path
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            yield from scantree(entry.path)
-        else:
-            yield entry
 
 
 def fix_base_folder(start_dir, file_list):
@@ -236,7 +217,7 @@ def fix_base_folder(start_dir, file_list):
         if verbose:
             print(f'Rescan {need_rescan}')
         file_list = []
-        for entry in scantree(start_dir):
+        for entry in scan_path(start_dir, vid_extensions, min_size=min_filesize):
             file_list.append(entry)
     return file_list
 
@@ -246,6 +227,7 @@ def fix_foldernames(start_dir, file_list):
     # todo cleanup foldername, remove scene tags from foldername. Example:
     # Before "Bone.Tomahawk.2015.720p.WEB-DL.DD5.1.H264-RARBG"
     # After  "Bone Tomahawk (2015)"
+    # smae format as for filenames
     print(f'fix_foldernames')
     need_rescan = False
     for file in file_list:
@@ -266,7 +248,7 @@ def fix_foldernames(start_dir, file_list):
         if verbose:
             print(f'Rescan FOLDERS {need_rescan}')
         file_list = []
-        for entry in scantree(start_dir):
+        for entry in scan_path(start_dir, vid_extensions, min_size=min_filesize):
             file_list.append(entry)
     return file_list
 
@@ -276,6 +258,7 @@ def fix_filenames(start_dir, file_list):
     # todo cleanup filesname, remove scene tags from filename. Example:
     # Before "Bone.Tomahawk.2015.720p.WEB-DL.DD5.1.H264-RARBG.mkv"
     # After  "Bone Tomahawk (2015).mkv"
+    # Correct filenames should be extracted from nfo/xml
     print(f'fix_filenames')
     need_rescan = False
     for file in file_list:
@@ -296,7 +279,7 @@ def fix_filenames(start_dir, file_list):
         if verbose:
             print(f'Rescan FILELIST {need_rescan}')
         file_list = []
-        for entry in scantree(start_dir):
+        for entry in scan_path(start_dir, vid_extensions, min_size=min_filesize):
             file_list.append(entry)
     return file_list
 
@@ -309,7 +292,7 @@ def clean_subfolders(folder_list):
         search_dir = os.path.dirname(subdir.path)
         if os.path.isdir(search_dir):
             file_list = []
-            for entry in scan_subdir(search_dir):
+            for entry in scan_path(search_dir, '*', min_size=0):
                 file_list.append(entry)
         for file in file_list:
             filename = file.name.lower()
@@ -359,7 +342,7 @@ def check_nfo_files(file_list):
     invalid_files = []
     print(f'Scanning NFO/XML/TXT')
     for file in file_list:
-        nfolist = scan_nfo_files(os.path.dirname(file.path))
+        nfolist = scan_path(os.path.dirname(file.path), valid_nfo_files, min_size=1)
         nfo_nfocounter = 0
         xml_nfocounter = 0
         txt_nfocounter = 0
@@ -367,8 +350,15 @@ def check_nfo_files(file_list):
         xml_files_to_merge = []
         nfo_files_to_merge = []
         txt_files_to_merge = []
-        for nfo in nfolist:            
+        for nfo in nfolist:
             if nfo.name.endswith('nfo'):
+                # result_xml_filename = nfo.path + '.tmp'
+                result_xml_filename = os.path.dirname(nfo) + '/' + os.path.basename(os.path.dirname(file.path)) + '.conerted.xml'
+                if not dry_run:
+                    os.rename(src=nfo.path, dst=nfo.path + '.invalid')
+                # os.path.dirname(nfo)
+                # os.path.basename(os.path.dirname(file.path))
+                nfo_extractor(nfo.path, result_xml_filename, dry_run)
                 if not is_valid_nfo(nfo):
                     # not valid files, delete
                     # todo delete, rename for now...
@@ -379,7 +369,10 @@ def check_nfo_files(file_list):
                         print(f'Found invalid NFO {nfo.path}')
                     new_name = nfo.path + '.invalid'
                     if not dry_run:
-                        os.rename(src=nfo, dst=new_name)
+                        try:
+                            os.rename(src=nfo, dst=new_name)
+                        except Exception as e:
+                            print(f'check_nfo_files: {e}')
                     # pass
                 else:
                     nfo_nfocounter += 1
@@ -395,6 +388,7 @@ def check_nfo_files(file_list):
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
                 else:
+                    # todo check if xml filename is correct and rename if needed..... might be missing (year)
                     if nfo.name == 'movie.xml':  # and xml_nfocounter == 1:
                         # found only one xml, check correct name according to movie title
                         title = get_xml_movie_title(nfo)
@@ -406,7 +400,7 @@ def check_nfo_files(file_list):
                         title = None
                         xml_nfocounter += 1
                         xml_files_to_merge.append(new_nfo_name)
-                        # print(f'xml count is {xml_nfocounter} for {file.path} nfo file: {nfo.path} - found title is: {title}')        
+                        # print(f'xml count is {xml_nfocounter} for {file.path} nfo file: {nfo.path} - found title is: {title}')
                         # time.sleep(1)
                     else:
                         xml_nfocounter += 1
@@ -434,14 +428,15 @@ def check_nfo_files(file_list):
             print(f'nfo / xml merger needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
         if nfo_nfocounter >= 1 and xml_nfocounter == 0:
             # need to extract some info from nfo and keep only xml
-            print(f'nfo to xml conversion needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
+            print(f'nfo to xml conversion needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')            
             # pass
             # exit(-1)
+
 
 def normalscan(start_dir):
     file_list = []
     # populate movie list from base folder...
-    for entry in scantree(start_dir):
+    for entry in scan_path(start_dir, vid_extensions, min_size=min_filesize):
         file_list.append(entry)
     # move movies in base folder to subfolders...
     # todo check if file exists in basefolder before calling fix_base_folder
@@ -454,6 +449,12 @@ def normalscan(start_dir):
     clean_subfolders(file_list)
     # check for multiple nfo/xml and merge into one file
     check_nfo_files(file_list)
+    # rescan .... todo fix
+    file_list = []
+    # populate movie list from base folder...
+    for entry in scan_path(start_dir, vid_extensions, min_size=min_filesize):
+        file_list.append(entry)
+
     return file_list
 
 
@@ -461,6 +462,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="moviething")
     parser.add_argument("--path", nargs="?", default="d:/movies",
                         help="Base movie folder", required=True, action="store",)
+    parser.add_argument("--import_path", action="store",
+                        help="Import movie files from folder and move them to Base movie folder")
     parser.add_argument("--dryrun", action="store_true",
                         help="Dry run - no changes to filesystem")
     parser.add_argument("--verbose", action="store_true",
@@ -469,6 +472,9 @@ if __name__ == '__main__':
     if args.path:
         print(f'Basedir: {args.path}')
         basemovie_dir = args.path
+    if args.import_path:
+        print(f'Importing from: {args.import_path}')
+        import_path = args.import_path
     if args.dryrun:
         print(f'Dry run: {args.dryrun}')
         dry_run = True
@@ -483,7 +489,10 @@ if __name__ == '__main__':
     # base movie folder
     # each movie should reside in it's own subfolder - not in basemovie_dir
     # structure <drive>:/<movie base dir>/<movie title>
-
+    if args.import_path:
+        # todo write this
+        print('Starting impprt')
+        # exit(-1)
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)

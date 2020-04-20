@@ -10,8 +10,11 @@ import string
 import unicodedata
 # import sys
 # import time
-import xml.etree.ElementTree as ET
+#import xml.etree.ElementTree as ET
+from lxml import etree as ET
 from collections import defaultdict
+from xml.dom import minidom
+from xml.parsers.expat import ExpatError
 # from pathlib import Path
 
 # import requests
@@ -21,13 +24,15 @@ valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
 char_limit = 255
 
 mediainfo_tags = [
-    'Audio Bit rate', 'Audio Bit rate mode', 'Audio Channel positions', 'Audio Channel(s)', 'Audio Channel(s)_Original',
-    'Audio Codec ID', 'Audio Compression mode', 'Audio Duration', 'Audio Encoded date', 'Audio Format', 'Audio Format profile',
-    'Audio Format/Info', 'Audio ID', 'Audio Language', 'Audio Sampling rate', 'Audio Stream size', 'Audio Tagged date', 'Video Bit depth',
-    'Video Bit rate', 'Video Bits/(Pixel*Frame)', 'Video Chroma subsampling', 'Video Codec ID', 'Video Codec ID/Info', 'Video Color space',
-    'Video Display aspect ratio', 'Video Duration', 'Video Encoded date', 'Video Encoding settings', 'Video Format', 'Video Format profile',
-    'Video Format settings, CABAC', 'Video Format settings, ReFrames', 'Video Format/Info', 'Video Frame rate', 'Video Frame rate mode',
-    'Video Height', 'Video ID', 'Video Scan type', 'Video Stream size', 'Video Tagged date', 'Video Width', 'Video Writing library']
+    'audio bit rate', 'audio bit rate mode', 'audio channel positions', 'audio channel(s)', 'audio channel(s)_original',
+    'audio codec id', 'audio compression mode', 'audio duration', 'audio encoded date', 'audio format', 'audio format profile',
+    'audio format/info', 'audio id', 'audio language', 'audio sampling rate', 'audio stream size', 'audio tagged date', 'video bit depth',
+    'video bit rate', 'video bits/(pixel*frame)', 'video chroma subsampling', 'video codec id', 'video codec id/info', 'video color space',
+    'video display aspect ratio', 'video duration', 'video encoded date', 'video encoding settings', 'video format', 'video format profile',
+    'video format settings, cabac', 'video format settings, reframes', 'video format/info', 'video frame rate', 'video frame rate mode',
+    'video height', 'video id', 'video scan type', 'video stream size', 'video tagged date', 'video width', 'video writing library',
+    'format', 'id','format','format/info','format profile','format settings, cabac','format settings, reframes','codec id','codec id/info','duration','bit rate','width','height','display aspect ratio','frame rate mode','frame rate','color space','chroma subsampling','bit depth','scan type','bits/(pixel*frame)','stream size','writing library','encoded date','tagged date',
+    ]
 
 
 class hashabledict(dict):
@@ -42,10 +47,10 @@ class XMLCombiner(object):
         self.roots = []
         for f in filenames:
             try:
-                root = ET.parse(f).getroot()
+                root = ET.parse(f.path).getroot()
                 self.roots.append(root)
             except Exception as e:
-                print(f'Error parsing xml {f} {e}')
+                print(f'XMLCombiner: Error parsing xml {f} {e}')
                 exit(-1)
         # assert len(filenames) > 0, 'No filenames!'
         # save all the roots, in order, to be processed later
@@ -316,56 +321,16 @@ def get_xml_data(file):
     return xml_data
 
 
-def read_xml(file):
-    # read xml, return structured movie info or None if failed
-    # todo validate xml before returning imcomplete data....
-    data = None
-    xml_file = open(file, encoding='utf-8', errors='ignore')
-    # xml_data = xml_file.readlines()
-    xml_file.close()
-    root = ET.parse(file).getroot()
-    children = list(root)
-    for subchild in children:
-        print(subchild.tag, subchild.text)
-        if len(list(subchild)) > 1:
-            for k in list(subchild):
-                print(f'\t{k.tag}: {k.text}')
-
-    return data
-
-
-def get_xml_config(file):
-    xml_file = open(file, encoding='utf-8', errors='ignore')
-    xml_data = xml_file.read()
-    xml_file.close()
-    root = ET.fromstring(xml_data)
-    xml_config = XmlListConfig(root)
-    print(f'xml_config: {xml_config}')
-    return xml_config
-
-
-def get_valid_tags(file):
-    valid_tags = []
-    xml_file = open(file, encoding='utf-8', errors='ignore')
-    # xml_data = xml_file.read()
-    xml_file.close()
-    root = ET.parse(file).getroot()
-    for ch in list(root):
-        valid_tags.append(ch.tag.lower())
-    valid_tags = sorted(set(valid_tags))
-    return valid_tags
-
-
 def is_valid_xml(file):
     try:
         # xml_file = open(file, encoding='utf-8', errors='ignore')
         # xml_data = xml_file.read()
         # xml_file.close()
-        root = ET.parse(file).getroot()
+        ET.parse(file.path).getroot()
         # print(f'is_valid_xml: {root} {file}')
         return True
     except Exception as e:
-        print(f'Invalid XML {file} {e}')
+        print(f'is_valid_xml: Invalid XML {file} {e}')
         return False
 
 
@@ -373,12 +338,19 @@ def get_xml_movie_title(nfo_file):
     movie_title = None
     title = None
     try:
-        root = ET.parse(nfo_file).getroot()
-        movie_title = root.find('title').text
-        movie_year = root.find('year').text
-        title = sanatized_string(movie_title) + ' (' + movie_year + ')'
+        if nfo_file.name == 'movie.xml':
+            root = ET.parse(nfo_file).getroot()
+            movie_title = root.find('OriginalTitle').text
+            movie_year = root.find('ProductionYear').text
+            title = sanatized_string(movie_title) + ' (' + movie_year + ')'
+            return title
+        else:
+            root = ET.parse(nfo_file).getroot()
+            movie_title = root.find('title').text
+            movie_year = root.find('year').text
+            title = sanatized_string(movie_title) + ' (' + movie_year + ')'
     except Exception as e:
-        print(f'Error extracting xml movie title from {nfo_file} {e}')
+        print(f'Error extracting xml movie title from {nfo_file.path} {e}')
         exit(-1)
     return title
 
@@ -388,17 +360,25 @@ def xml_merge_nfo_files(files, dry_run):
     # todo fix output filename
     r = XMLCombiner(files).combine()
     result = ET.ElementTree(element=r.getroot())
+    guess_regex = re.compile(r'^(.*)[^\(](\(\d{4}\)$)')
     title = result.find('title')
+    if title is not None: title = title.text
     year = result.find('year')
-#    tmp_suffix = ' temp.xml'
-
-#    xml_out = title.text + ' (' + year.text + ')' + tmp_suffix
-#    print(f'title: {title.text} year: {year.text} --- saving result as: {xml_out}')
-#    if not dry_run:
-#        if not os.path.exists(xml_out):
-#            result.write(xml_out, xml_declaration=True, encoding='utf-8')
-#        else:
-#            print(f'{xml_out} alread exists.....')
+    if year is not None: year = year.text
+    if title is None or year is None:
+        guess_data = os.path.basename(os.path.dirname(files[0].path))
+        guess = re.search(guess_regex, guess_data)
+        title = guess.group(1)
+        year = guess.group(2)
+    # if title is None:
+    #     guessed_title = os.path.basename(os.path.dirname(files[0].path))
+    #     print(f'xml_merge_nfo: got no title {files}')
+    #     print(f'Guessed title {guessed_title}')
+    #     # exit(-1)
+    
+    # if year is None:
+    #     print(f'xml_merge_nfo: got no year {files}')
+    #     exit(-1)
 
     # todo rename / delete old files
     for file in files:
@@ -410,7 +390,7 @@ def xml_merge_nfo_files(files, dry_run):
         except Exception as e:
             print(f'Rename {file} failed {e}')
             # return False
-    final_xml = os.path.dirname(files[0]) + '/' + sanatized_string(title.text) + ' (' + year.text + ').xml'
+    final_xml = os.path.dirname(files[0]) + '/' + sanatized_string(title) + ' (' + year + ').merged.xml'
     print(f'Saving merged xml as {final_xml}')
     if not dry_run:
         try:
@@ -421,6 +401,63 @@ def xml_merge_nfo_files(files, dry_run):
             return False
     return True
 
+def nfo_extractor(nfo_file, result_file, dry_run):
+    root = ET.Element('movie')
+    tree = ET.ElementTree(element=root)
+    root = tree.getroot()
+    imdb_link = None
+    imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
+    tag_regex_1 = re.compile(r"^(\w|\s)+[^\.]")
+    try:
+        f = open(nfo_file, mode='r', encoding='utf-8', errors='ignore')
+    except FileNotFoundError as e:
+        print(f'nfo_extractor: {e}')
+        return
+    lines = f.read().split('\n')
+    tag_count = 0
+    for line in lines:
+        imdb_match = re.search(imdb_regex, line)
+        if imdb_match:
+            imdb_link = imdb_match.group(0)
+            imdb_id = imdb_match.group(1)
+            a = ET.SubElement(root,'imdb_link')
+            a.text = imdb_link
+            a = ET.SubElement(root,'id')
+            a.text = imdb_id
+            tag_count += 1
+        else:
+            try:
+                tag, value = line.split(':', maxsplit=1)
+                tag = tag.strip()
+#                tag = tag.replace(' ','')
+                value = value.strip()
+                if tag == 'ID': tag = None # used by imdb
+                if tag.lower() in mediainfo_tags:
+                    tag = tag.replace(' ', '')
+                    tag_count += 1
+                    # print(f't: {tag} v: {value} c: {tag_count}')
+                    a = ET.SubElement(root,tag)
+                    a.text = value
+                    
+            except:
+                pass
+    if imdb_link is not None:
+        tree = ET.ElementTree(root)
+        try:
+            tree.write(result_file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+            print(f'Extracted {tag_count} from {nfo_file} saved as {result_file}')            
+            if not dry_run:
+                os.rename(src=nfo_file, dst=nfo_file + '.invalid')
+            return True
+        except Exception as e:
+            print(f'{e}')
+            exit(-1)
+    else:
+        print(f'No IMDB link/id found in {nfo_file}')
+        if not dry_run:
+            os.rename(src=nfo_file, dst=nfo_file + '.invalid')
+        return False
+    return True
 
 if __name__ == '__main__':
     # file = 'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.nfo'
@@ -445,4 +482,6 @@ if __name__ == '__main__':
         'c:/Users/kthor/Documents/development/moviething/oldstuff/movie.xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One 2012.xml')
-    merge_nfo_files(merge_files)
+    nfotest = 'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.nfo'
+    nfo_extractor(nfotest, 'testingstuff/testout.xml')
+    #xml_merge_nfo_files(merge_files)
