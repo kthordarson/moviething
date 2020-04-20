@@ -10,6 +10,7 @@ import argparse
 # import codecs
 # import hashlib
 import os
+import shutil
 # import platform
 # import re
 # import string
@@ -77,25 +78,6 @@ class MovieClass(object):
                     print(f'MovieClass Error parsing XML {nfo} {e}')
                     exit(-1)
                     # xml_data = None
-            if nfo.name.endswith('nfo'):
-                try:
-                    nfo_data = get_nfo_data(nfo)
-                    if verbose and nfo_data is not None:
-                        pass
-                        # print(f'Got nfo {type(nfo_data)} {len(nfo_data)}')
-                    if nfo_data is not None:
-                        self.nfo_data = nfo_data
-                        # self.nfo_file_count += 1
-                        self.nfo_files.append(nfo)
-                    if nfo_data is None:
-                        print(f'No NFO data extracted from {nfo.path}')
-                        if not dry_run:
-                            # todo remove useless nfo file
-                            # todo this should be done before arriving here.....
-                            pass
-                except Exception as e:
-                    print(f'scan_nfo: Error parsing NFO {nfo.path} {e}')
-                    exit(-1)
 
     def populate_info(self):
         # gather info to ensure correct folder/filenames
@@ -117,21 +99,6 @@ class MovieClass(object):
                 'title', None)  # self.xml_data['title']
             self.year = self.xml_data.get(
                 'year', None)  # self.xml_data['year']
-            self.rename_file_required = False
-            self.rename_path_required = False
-            # and self.imdb_id is not None:
-            if self.title is not None and self.year is not None:
-                sanatized_title = sanatized_string(self.title)
-                self.correct_pathname = sanatized_title + \
-                    ' (' + self.year + ')'
-                self.correct_filename = self.correct_pathname + self.extension
-                if self.correct_filename != self.filename.name:
-                    self.rename_file_required = True
-                    self.rename_movie_file()
-                if self.correct_pathname != os.path.basename(self.path):
-                    self.rename_path_required = True
-                    self.rename_movie_path()
-                # todo check if actual path/filename matches correct names gathered from nfo/xml and correct if needed
         elif self.nfo_data is not None:
             if verbose:
                 print(
@@ -284,9 +251,29 @@ def fix_filenames(start_dir, file_list):
     return file_list
 
 
+def clean_subfolder(base_folder):
+    if verbose:
+        print(f'Cleaning {base_folder}')
+    for d in os.scandir(base_folder):
+        if os.path.isdir(d):
+            if verbose:
+                print(f'Cleaning unwanted subfolders {d.name}')
+            if d.name.lower() in unwanted_files['subdirs']:
+                print(f'{d.path} is unwanted, delete!')
+                if not dry_run:
+                    try:
+                        shutil.rmtree(d.path, ignore_errors=True)
+                        # os.removedirs(d.path)
+                        # os.rename(src=d.path, dst=d.path+'.deleted')
+                    except Exception as e:
+                        print(f'Delete subfolder {d.path} failed {e}')
+                        # exit(-1)
+        else:
+            print(f'clean unwanted files from {d.name}')
+    
 def clean_subfolders(folder_list):
     # clean unwanted files from movie folders
-    print('clean_subfolders')
+    print(f'Clean_subfolders: {folder_list}')
     for subdir in folder_list:
         # are we in a subdir
         search_dir = os.path.dirname(subdir.path)
@@ -432,6 +419,14 @@ def check_nfo_files(file_list):
             # pass
             # exit(-1)
 
+def get_folders(base_path):
+    folders = []
+    for d in os.scandir(base_path):
+        if os.path.isdir(d):
+            folders.append(d)
+            # print(f'{d} is folder')
+    return folders
+
 
 def normalscan(start_dir):
     file_list = []
@@ -446,7 +441,11 @@ def normalscan(start_dir):
     # fix non-ascii filenames
     file_list = fix_filenames(start_dir, file_list)
     # clean subfolders of unwanted extra files
-    clean_subfolders(file_list)
+    folder_list = get_folders(start_dir)
+    for folder in folder_list:
+        clean_subfolder(folder)
+    exit(-1)
+    # clean_subfolders(start_dir)
     # check for multiple nfo/xml and merge into one file
     check_nfo_files(file_list)
     # rescan .... todo fix
