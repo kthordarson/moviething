@@ -6,6 +6,8 @@
 import os
 # import platform
 import re
+import string
+import unicodedata
 # import sys
 # import time
 import xml.etree.ElementTree as ET
@@ -14,6 +16,9 @@ from collections import defaultdict
 
 # import requests
 # import unidecode
+
+valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+char_limit = 255
 
 mediainfo_tags = [
     'Audio Bit rate', 'Audio Bit rate mode', 'Audio Channel positions', 'Audio Channel(s)', 'Audio Channel(s)_Original',
@@ -33,9 +38,18 @@ class hashabledict(dict):
 class XMLCombiner(object):
     # https://stackoverflow.com/questions/14878706/merge-xml-files-with-nested-elements-without-external-libraries
     def __init__(self, filenames):
-        assert len(filenames) > 0, 'No filenames!'
+        self.filenames = filenames
+        self.roots = []
+        for f in filenames:
+            try:
+                root = ET.parse(f).getroot()
+                self.roots.append(root)
+            except Exception as e:
+                print(f'Error parsing xml {f} {e}')
+                exit(-1)
+        # assert len(filenames) > 0, 'No filenames!'
         # save all the roots, in order, to be processed later
-        self.roots = [ET.parse(f).getroot() for f in filenames]
+        # self.roots = [ET.parse(f).getroot() for f in filenames]
 
     def combine(self):
         for r in self.roots[1:]:
@@ -79,6 +93,23 @@ class XMLCombiner(object):
                     mapping[(el.tag, hashabledict(el.attrib))] = el
                     # Just add it
                     one.append(el)
+
+
+def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
+    # replace spaces
+    for r in replace:
+        input_string = input_string.replace(r, '_')
+
+    # keep only valid ascii chars
+    cleaned_input_string = unicodedata.normalize(
+        'NFKD', input_string).encode('ASCII', 'ignore').decode()
+
+    # keep only whitelisted chars
+    cleaned_input_string = ''.join(
+        c for c in cleaned_input_string if c in whitelist)
+    if len(cleaned_input_string) > char_limit:
+        print("Warning, input_string truncated because it was over {}. input_strings may no longer be unique".format(char_limit))
+    return cleaned_input_string[:char_limit]
 
 
 def get_nfo_data(file):
@@ -309,7 +340,7 @@ def get_xml_config(file):
     xml_file.close()
     root = ET.fromstring(xml_data)
     xml_config = XmlListConfig(root)
-    print(xml_config)
+    print(f'xml_config: {xml_config}')
     return xml_config
 
 
@@ -331,35 +362,63 @@ def is_valid_xml(file):
         # xml_data = xml_file.read()
         # xml_file.close()
         root = ET.parse(file).getroot()
-        print(root)
+        # print(f'is_valid_xml: {root} {file}')
         return True
     except Exception as e:
         print(f'Invalid XML {file} {e}')
         return False
 
 
-def merge_nfo_files(files):
+def get_xml_movie_title(nfo_file):
+    movie_title = None
+    title = None
+    try:
+        root = ET.parse(nfo_file).getroot()
+        movie_title = root.find('title').text
+        movie_year = root.find('year').text
+        title = sanatized_string(movie_title) + ' (' + movie_year + ')'
+    except Exception as e:
+        print(f'Error extracting xml movie title from {nfo_file} {e}')
+        exit(-1)
+    return title
+
+
+def xml_merge_nfo_files(files, dry_run):
     # merger...
     # todo fix output filename
     r = XMLCombiner(files).combine()
     result = ET.ElementTree(element=r.getroot())
     title = result.find('title')
     year = result.find('year')
-    xml_out = 'oldstuff/' + title.text + ' (' + year.text + ') temp.xml'
-    print(f'title: {title.text} year: {year.text} --- saving result as: {xml_out}')
-    result.write(xml_out, xml_declaration=True, encoding='utf-8')
+#    tmp_suffix = ' temp.xml'
+
+#    xml_out = title.text + ' (' + year.text + ')' + tmp_suffix
+#    print(f'title: {title.text} year: {year.text} --- saving result as: {xml_out}')
+#    if not dry_run:
+#        if not os.path.exists(xml_out):
+#            result.write(xml_out, xml_declaration=True, encoding='utf-8')
+#        else:
+#            print(f'{xml_out} alread exists.....')
 
     # todo rename / delete old files
     for file in files:
-        new_name = file + '.oldnfo'
+        new_name = file.path + '.old_data'
         try:
-            os.rename(src=file, dst=new_name)
-            print(f'file: {file} renamed to {new_name}')
+            if not dry_run:
+                os.rename(src=file, dst=new_name)
+            print(f'file: {file.path} renamed to {new_name}')
         except Exception as e:
             print(f'Rename {file} failed {e}')
+            # return False
+    final_xml = os.path.dirname(files[0]) + '/' + sanatized_string(title.text) + ' (' + year.text + ').xml'
+    print(f'Saving merged xml as {final_xml}')
+    if not dry_run:
+        try:
+            result.write(final_xml, xml_declaration=True, encoding='utf-8')
+            return True
+        except Exception as e:
+            print(f'Error saving final xml {e}')
             return False
-    final_xml = 'oldstuff/' + title.text + ' (' + year.text + ').xml'
-    os.rename(src=xml_out, dst=final_xml)
     return True
 
 

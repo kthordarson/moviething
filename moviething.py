@@ -12,10 +12,9 @@ import argparse
 import os
 # import platform
 # import re
-import string
+# import string
 # import sys
 import time
-import unicodedata
 # import xml.etree.ElementTree as ET
 # from pathlib import Path
 
@@ -24,7 +23,8 @@ import unidecode
 
 from nfoparser import (
     get_nfo_data, get_xml_data, is_valid_nfo,
-    is_valid_txt, is_valid_xml, merge_nfo_files)
+    is_valid_txt, is_valid_xml, xml_merge_nfo_files, sanatized_string,
+    get_xml_movie_title)
 
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
@@ -32,8 +32,6 @@ vid_extensions = (
 
 min_filesize = 40000000
 
-valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-char_limit = 255
 
 # unwanted files / subdirs
 # will be deleted automatically
@@ -46,23 +44,6 @@ unwanted_files = dict(
 )
 
 valid_nfo_files = ('nfo', 'xml', 'txt')
-
-
-def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
-    # replace spaces
-    for r in replace:
-        input_string = input_string.replace(r, '_')
-
-    # keep only valid ascii chars
-    cleaned_input_string = unicodedata.normalize(
-        'NFKD', input_string).encode('ASCII', 'ignore').decode()
-
-    # keep only whitelisted chars
-    cleaned_input_string = ''.join(
-        c for c in cleaned_input_string if c in whitelist)
-    if len(cleaned_input_string) > char_limit:
-        print("Warning, input_string truncated because it was over {}. input_strings may no longer be unique".format(char_limit))
-    return cleaned_input_string[:char_limit]
 
 
 class MovieClass(object):
@@ -128,8 +109,8 @@ class MovieClass(object):
                 self.imdb_id = self.imdb_id[0]
             if self.imdb_id is not None:
                 if verbose:
-                    print(
-                        f'IMDB found {self.imdb_id} for {self.filename.name}')
+                    pass
+                    # print(f'IMDB found {self.imdb_id} for {self.filename.name}')
                 self.imdb_link = 'https://www.imdb.com/title/' + self.imdb_id
             self.title = self.xml_data.get(
                 'title', None)  # self.xml_data['title']
@@ -376,18 +357,22 @@ def check_nfo_files(file_list):
     # delete remaining nfo / xml
     invalid_file_counter = 0
     invalid_files = []
+    print(f'Scanning NFO/XML/TXT')
     for file in file_list:
-        print(f'Scanning NFO/XML/TXT for {file.path}')
         nfolist = scan_nfo_files(os.path.dirname(file.path))
-        nfocounter = 0
+        nfo_nfocounter = 0
+        xml_nfocounter = 0
+        txt_nfocounter = 0
         # merge_needed = False
-        files_to_merge = []
-        for nfo in nfolist:
-            nfocounter += 1
+        xml_files_to_merge = []
+        nfo_files_to_merge = []
+        txt_files_to_merge = []
+        for nfo in nfolist:            
             if nfo.name.endswith('nfo'):
                 if not is_valid_nfo(nfo):
                     # not valid files, delete
                     # todo delete, rename for now...
+                    # todo extract useful info, merge or convert to xml, then discard nfo files....
                     invalid_file_counter += 1
                     invalid_files.append(nfo)
                     if verbose:
@@ -397,7 +382,8 @@ def check_nfo_files(file_list):
                         os.rename(src=nfo, dst=new_name)
                     # pass
                 else:
-                    files_to_merge.append(nfo)
+                    nfo_nfocounter += 1
+                    nfo_files_to_merge.append(nfo)
             if nfo.name.endswith('xml'):
                 if not is_valid_xml(nfo):
                     # not valid xml, delete
@@ -409,8 +395,22 @@ def check_nfo_files(file_list):
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
                 else:
-                    files_to_merge.append(nfo)
-
+                    if nfo.name == 'movie.xml':  # and xml_nfocounter == 1:
+                        # found only one xml, check correct name according to movie title
+                        title = get_xml_movie_title(nfo)
+                        new_nfo_name = os.path.dirname(nfo) + '/' + title + '.xml'
+                        if verbose:
+                            print(f'Renaming {nfo.path} to {new_nfo_name} according to found title: {title}')
+                        if not dry_run:
+                            os.rename(src=nfo.path, dst=new_nfo_name)
+                        title = None
+                        xml_nfocounter += 1
+                        xml_files_to_merge.append(new_nfo_name)
+                        # print(f'xml count is {xml_nfocounter} for {file.path} nfo file: {nfo.path} - found title is: {title}')        
+                        # time.sleep(1)
+                    else:
+                        xml_nfocounter += 1
+                        xml_files_to_merge.append(nfo)
             if nfo.name.endswith('txt'):
                 if not is_valid_txt(nfo):
                     invalid_file_counter += 1
@@ -422,14 +422,21 @@ def check_nfo_files(file_list):
                         os.rename(src=nfo, dst=new_name)
                     # no imdb link/id found in txt, discard...
                 else:
-                    files_to_merge.append(nfo)
-        if nfocounter > 1:
+                    txt_nfocounter += 1
+                    txt_files_to_merge.append(nfo)
+        if xml_nfocounter > 1:
             # print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
             # print(f'Merging files ... {files_to_merge}')
             # merge_needed = True
-            merge_nfo_files(files_to_merge)
-    exit(-1)
-
+            xml_merge_nfo_files(xml_files_to_merge, dry_run)
+        if nfo_nfocounter >= 1 and xml_nfocounter >= 1:
+            # need to extract some info from nfo and keep only xml
+            print(f'nfo / xml merger needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
+        if nfo_nfocounter >= 1 and xml_nfocounter == 0:
+            # need to extract some info from nfo and keep only xml
+            print(f'nfo to xml conversion needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
+            # pass
+            # exit(-1)
 
 def normalscan(start_dir):
     file_list = []
@@ -480,16 +487,12 @@ if __name__ == '__main__':
     file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
     movie_list = populate_movielist(file_list)
-    filerename, folderrename = 0, 0
+    imdb_links = 0
+    imdb_missing = 0
     for movie in movie_list:
-        if movie.rename_file_required:
-            filerename += 1
-        if movie.rename_path_required:
-            folderrename += 1
-#    for movie in movie_list:
-#        print(f'{movie.filename.name} {movie.imdb_link}')
-#        if movie.nfo_file_count > 1:
-#            print(f'{movie.filename.path} has multiple {movie.nfo_file_count} nfo/xml files')
-    print(
-        f'moviecount: {len(movie_list)} time {time.time() - t1}')
-    print(f'rename files {filerename} folders {folderrename}')
+        if movie.imdb_link is None:
+            imdb_missing += 1
+        else:
+            imdb_links += 1
+    print(f'moviecount: {len(movie_list)} time {time.time() - t1}')
+    print(f'valid links {imdb_links} missing {imdb_missing}')
