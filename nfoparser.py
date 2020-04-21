@@ -1,44 +1,16 @@
 # nfo parser
 # read and parse nfo files, return valid info
-# import argparse
-# import codecs
-# import hashlib
 import os
 import glob
-# import platform
 import re
 import string
 import unicodedata
-# import sys
-# import time
-#import xml.etree.ElementTree as ET
 from lxml import etree as ET
 from collections import defaultdict
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
 from utils import scan_path
-# from pathlib import Path
-
-# import requests
-# import unidecode
-
-valid_nfo_files = ('nfo', 'xml', 'txt')
-
-
-valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-char_limit = 255
-
-mediainfo_tags = [
-    'audio bit rate', 'audio bit rate mode', 'audio channel positions', 'audio channel(s)', 'audio channel(s)_original',
-    'audio codec id', 'audio compression mode', 'audio duration', 'audio encoded date', 'audio format', 'audio format profile',
-    'audio format/info', 'audio id', 'audio language', 'audio sampling rate', 'audio stream size', 'audio tagged date', 'video bit depth',
-    'video bit rate', 'video bits/(pixel*frame)', 'video chroma subsampling', 'video codec id', 'video codec id/info', 'video color space',
-    'video display aspect ratio', 'video duration', 'video encoded date', 'video encoding settings', 'video format', 'video format profile',
-    'video format settings, cabac', 'video format settings, reframes', 'video format/info', 'video frame rate', 'video frame rate mode',
-    'video height', 'video id', 'video scan type', 'video stream size', 'video tagged date', 'video width', 'video writing library',
-    'format', 'id','format','format/info','format profile','format settings, cabac','format settings, reframes','codec id','codec id/info','duration','bit rate','width','height','display aspect ratio','frame rate mode','frame rate','color space','chroma subsampling','bit depth','scan type','bits/(pixel*frame)','stream size','writing library','encoded date','tagged date',
-    ]
-
+from defs import *
 
 class hashabledict(dict):
     def __hash__(self):
