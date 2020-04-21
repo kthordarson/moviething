@@ -2,9 +2,10 @@
 import os
 import shutil
 import glob
-from nfoparser import get_xml_data, merge_xml_files
+from nfoparser import *
 from scrapers import imdb_scrape
 from defs import *
+
 
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
@@ -52,6 +53,24 @@ def get_folders(base_path):
             # print(f'{d} is folder')
     return folders
 
+def get_video_filelist(movie_path):
+    # scan given move_path for valid video files, return first found
+    # todo handle multiple valid video files in movie_path
+    filelist = []
+    for root,dirs,files in os.walk(movie_path):
+        for file in files:
+            if file.endswith(vid_extensions)  and os.path.getsize(os.path.join(root,file)) > min_filesize:
+                filelist.append(os.path.join(root,file))
+    if len(filelist) > 0:
+        return filelist[0]
+    else:
+        return None
+
+# def get_video_filelist(movie_path):
+#     file_list = []
+#     for entry in scan_path(movie_path, vid_extensions, min_size=min_filesize):
+#         file_list.append(entry)
+#     return file_list
 
 def fix_names(folder, verbose, dry_run):
     # check if folder and files are named correctly, rename with info from xml
@@ -122,7 +141,9 @@ def clean_subfolder(movie_folder, verbose, dry_run):
                 print(f'{d.path} is unwanted, delete!')
                 if not dry_run:
                     try:
-                        shutil.rmtree(d.path, ignore_errors=True)
+                        os.makedirs(d.path+'/'+junkpathname, exist_ok=True)
+                        shutil.move(src=d.path, dst=d.path + '/' + junkpathname)
+                        # shutil.rmtree(d.path, ignore_errors=True)
                         # os.removedirs(d.path)
                         # os.rename(src=d.path, dst=d.path+'.deleted')
                     except Exception as e:
@@ -134,6 +155,30 @@ def clean_subfolder(movie_folder, verbose, dry_run):
                     print(f'Unwanted file: {d.path}')
                 if not dry_run:
                     try:
-                        os.remove(d.path)
+                        os.makedirs(d.path+'/'+junkpathname, exist_ok=True)
+                        shutil.move(src=d.path, dst=d.path + '/' + junkpathname)
+                        # os.remove(d.path)
                     except Exception as e:
                         print(f'Could not delete {d.path} {e}')
+
+# def populate_movielist(file_list):
+#     print('populate_movielist')
+#     movie_list = []
+#     for file in file_list:
+#         movie = MovieClass(filename=file)
+#         movie.scan_nfo(movie.path)
+#         movie.populate_info()
+#         movie_list.append(movie)
+#     return movie_list
+
+
+def normalscan(start_dir):
+    # folder_list contains a list of subfolders from start_dir, one movie per subfolder    
+    folder_list = get_folders(start_dir)
+    for folder in folder_list:
+        # clean subfolders of unwanted extra files
+        clean_subfolder(folder)
+        # fix folder/file names from xml info
+        fix_names(folder)
+    # exit(-1)
+    return

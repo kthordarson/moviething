@@ -9,12 +9,9 @@ from lxml import etree as ET
 from collections import defaultdict
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
-from utils import scan_path
+from utils import *
 from defs import *
-
-class hashabledict(dict):
-    def __hash__(self):
-        return hash(tuple(sorted(self.items())))
+# from classes import *
 
 
 def combine_xml(files):
@@ -28,6 +25,10 @@ def combine_xml(files):
     if first is not None:
         result = ET.ElementTree(first)
         return result
+
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
 
 class XMLCombiner(object):
     # https://stackoverflow.com/questions/14878706/merge-xml-files-with-nested-elements-without-external-libraries
@@ -342,26 +343,33 @@ def is_valid_xml(file):
         print(f'is_valid_xml: Invalid XML {file} {e}')
         return False
 
+def get_xml(movie_path):
+    # scan movie_path for valid xml, return first xml found
+    # todo fix if more than one found.....
+    xml = None
+    try:
+        xml = glob.glob(movie_path.path + '/*.xml') #movie_path+'/*.xml')
+    except Exception as e:
+        print(f'Error in get_xml {movie_path.path} {e}')
+        return None
+    if len(xml) == 0:
+        return None
+    else:
+        return xml[0]
 
 def get_xml_movie_title(nfo_file):
+    # extract valid movie title and year from nfo_file
     movie_title = None
     title = None
     try:
-        if nfo_file.name == 'movie.xml':
-            root = ET.parse(nfo_file).getroot()
-            movie_title = root.find('OriginalTitle').text
-            movie_year = root.find('ProductionYear').text
-            title = sanatized_string(movie_title) + ' (' + movie_year + ')'
-            return title
-        else:
-            root = ET.parse(nfo_file).getroot()
-            movie_title = root.find('title').text
-            movie_year = root.find('year').text
-            title = sanatized_string(movie_title) + ' (' + movie_year + ')'
+        root = ET.parse(nfo_file).getroot()
+        movie_title = root.find('title').text
+        movie_year = root.find('year').text
+        title = sanatized_string(movie_title) + ' (' + movie_year + ')'
+        return title
     except Exception as e:
-        print(f'Error extracting xml movie title from {nfo_file.path} {e}')
-        exit(-1)
-    return title
+        return None
+    return None
 
 
 def merge_xml_files(files, dry_run):
@@ -385,7 +393,7 @@ def merge_xml_files(files, dry_run):
 
     # todo rename / delete old files
     for file in files:
-        new_name = file + '.old_data'
+        new_name = file + junkpathname + '/' + '.old_data'
         try:
             if not dry_run:
                 os.rename(src=file, dst=new_name)
@@ -453,7 +461,7 @@ def nfo_extractor(nfo_file, result_file, dry_run):
             tree.write(result_file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
             print(f'Extracted {tag_count} from {nfo_file} saved as {result_file}')            
             if not dry_run:
-                os.rename(src=nfo_file, dst=nfo_file + '.invalid')
+                os.rename(src=nfo_file, dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + '.invalid')
             return True
         except Exception as e:
             print(f'{e}')
@@ -461,7 +469,7 @@ def nfo_extractor(nfo_file, result_file, dry_run):
     else:
         print(f'No IMDB link/id found in {nfo_file}')
         if not dry_run:
-            os.rename(src=nfo_file, dst=nfo_file + '.invalid')
+            os.rename(src=nfo_file,  dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + '.invalid')
         return False
     return True
 
@@ -488,7 +496,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                 # result_xml_filename = nfo.path + '.tmp'
                 result_xml_filename = os.path.dirname(nfo) + '/' + os.path.basename(os.path.dirname(file.path)) + '.converted.xml'
                 if not dry_run:
-                    os.rename(src=nfo.path, dst=nfo.path + '.invalid')
+                    os.rename(src=nfo.path, dst=nfo.path + '/' + junkpathname + '/' + '.invalid')
                 # os.path.dirname(nfo)
                 # os.path.basename(os.path.dirname(file.path))
                 nfo_extractor(nfo.path, result_xml_filename, dry_run)
@@ -500,7 +508,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid NFO {nfo.path}')
-                    new_name = nfo.path + '.invalid'
+                    new_name = os.path.dirname(nfo.path) + '/' + junkpathname + '/' + nfo.name + '.invalid'
                     if not dry_run:
                         try:
                             os.rename(src=nfo, dst=new_name)
@@ -517,7 +525,8 @@ def check_nfo_files(file_list, dry_run, verbose):
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid NFO {nfo.path}')
-                    new_name = nfo.path + '.invalid'
+                    # new_name = nfo.path + '.invalid'
+                    new_name = os.path.dirname(nfo.path) + '/' + junkpathname + '/' + nfo.name + '.invalid'
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
                 else:
@@ -544,7 +553,8 @@ def check_nfo_files(file_list, dry_run, verbose):
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid txt {nfo.path}')
-                    new_name = nfo.path + '.invalid'
+                    # new_name = nfo.path + '.invalid'
+                    new_name = os.path.dirname(nfo.path) + '/' + junkpathname + '/' + nfo.name + '.invalid'
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
                     # no imdb link/id found in txt, discard...
@@ -602,7 +612,17 @@ if __name__ == '__main__':
         'o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa.xml',
         'o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa (2015).xml',
     )
-    merge_xml_files(testmerge, dry_run=True)
+    test1 =(
+    'd:/movies/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena.xml',
+    'd:/movies/Alien.1979.Directors.Cut.1080p.BluRay.H264.AAC-RARBG/Alien.1979.Directors.Cut.1080p.BluRay.H264.AAC-RARBG.xml',
+    'd:/movies/Howls.Moving.Castle.2004.720p.BluRay.x264-x0r/Howls.Moving.Castle.2004.720p.BluRay.x264-x0r.xml',
+    'd:/movies/Reservoir Dogs (1992)/Reservoir Dogs (1992).xml',
+    'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.xml',
+    'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.xml',
+    )
+    for file in test1:
+        t = get_xml_movie_title(file)
+        print(t)
     # d = combine_xml(testmerge)
     # print(d)
     # e = ET.ElementTree(d)

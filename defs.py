@@ -23,6 +23,7 @@ vid_extensions = (
 
 min_filesize = 40000000
 
+junkpathname = 'junkignore'
 
 # unwanted files / subdirs
 # will be deleted automatically
