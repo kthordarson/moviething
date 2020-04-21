@@ -11,6 +11,7 @@ import argparse
 # import hashlib
 import os
 import shutil
+import glob
 # import platform
 # import re
 # import string
@@ -21,12 +22,15 @@ import time
 
 # import requests
 import unidecode
+from threading import Thread
+from multiprocessing import Process, Queue, JoinableQueue
 
 from nfoparser import (
     get_nfo_data, get_xml_data, is_valid_nfo,
-    is_valid_txt, is_valid_xml, xml_merge_nfo_files, sanatized_string,
-    get_xml_movie_title, nfo_extractor)
-
+    is_valid_txt, is_valid_xml, merge_xml_files, sanatized_string,
+    get_xml_movie_title, nfo_extractor, check_nfo_files, valid_nfo_files)
+from utils import scan_path
+from scrapers import imdb_scrape
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
 )
@@ -38,13 +42,46 @@ min_filesize = 40000000
 # will be deleted automatically
 unwanted_files = dict(
     subdirs=("sample", "samples"),
-    txtfiles=("readme.txt", "torrent downloaded from extratorrent.cc.txt", "rarbg.com.txt", "torrent-downloaded-from-extratorrent.cc.txt",
-              "ahashare.com.txt", "torrent downloaded from demonoid.com - copy.txt", "torrent downloaded from demonoid.com.txt"),
+    txtfiles=("readme.txt", "torrent downloaded from.txt", "rarbg.com.txt", "torrent-downloaded-from-extratorrent.cc.txt",
+              "ahashare.com.txt"),
     images=("www.yify-torrents.com.jpg", "screenshot", "www.yts.am.jpg"),
-    videos=("rarbg.com.mp4", "sample.mkv")
+    videos=("rarbg.com.mp4", "sample")
 )
 
-valid_nfo_files = ('nfo', 'xml', 'txt')
+
+class MainThread(Thread):
+    def __init__ (self, name, base_path='d:/movies', verbose=True, dry_run=True):
+        Thread.__init__(self)
+        self.name = name
+        self.verbose = verbose
+        self.dry_run = dry_run
+        self.base_path = base_path
+        self.folder_list = None
+        self.kill = False
+    def run(self):
+        if self.verbose:
+            print(f'MainThread: {self.name} starting bp: {self.base_path}')
+        if self.folder_list is None:
+            self.folder_list = get_folders(self.base_path)
+        if self.verbose:
+            print(f'First scan {len(self.folder_list)}')
+        while True:
+            if self.kill:
+                return
+            if self.verbose:
+                print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run}')
+            time.sleep(1)
+    def join(self):
+        self.kill = True
+        super().join()
+    def get_folders(self):
+        self.folder_list = get_folders(self.base_path)
+    def dump_folders(self):
+        if self.folder_list:
+            for f in self.folder_list:
+                print(f'{f}')
+
+
 
 
 class MovieClass(object):
@@ -52,113 +89,7 @@ class MovieClass(object):
         self.filename = filename
         self.basename, self.extension = os.path.splitext(filename)
         self.path = os.path.dirname(filename)
-        self.imdb_link = None
-        self.nfo_file_count = 0
-        self.nfo_files = []
         self.xml_data = None
-        self.nfo_data = None
-        self.rename_file_required = False
-        self.rename_path_required = False
-
-    def scan_nfo(self, path):
-        # scan folder containing this movie for valid nfo files
-        # tstart = time.time()
-        nfofiles = scan_path(path, valid_nfo_files, min_size=1)
-        for nfo in nfofiles:
-            if nfo.name.endswith('xml'):
-                try:
-                    xml_data = get_xml_data(nfo.path)
-                    movie_data = xml_data.get(
-                        'movie') or xml_data.get('Title', None)
-                    # xml_data = etree_to_dict(nfo)
-                    self.xml_data = movie_data
-                    # self.nfo_file_count += 1
-                    self.nfo_files.append(nfo)
-                except Exception as e:
-                    print(f'MovieClass Error parsing XML {nfo} {e}')
-                    exit(-1)
-                    # xml_data = None
-
-    def populate_info(self):
-        # gather info to ensure correct folder/filenames
-        if self.xml_data is not None:
-            if verbose:
-                pass
-                # print(f'Gathering xml data {self.filename.name} {self.nfo_files}')
-            self.imdb_id = self.xml_data.get('id', None)  # self.xml_data['id']
-            if self.imdb_id is None:
-                self.imdb_id = self.xml_data.get('IMDbId', None)
-            if type(self.imdb_id) == list:
-                self.imdb_id = self.imdb_id[0]
-            if self.imdb_id is not None:
-                if verbose:
-                    pass
-                    # print(f'IMDB found {self.imdb_id} for {self.filename.name}')
-                self.imdb_link = 'https://www.imdb.com/title/' + self.imdb_id
-            self.title = self.xml_data.get(
-                'title', None)  # self.xml_data['title']
-            self.year = self.xml_data.get(
-                'year', None)  # self.xml_data['year']
-        elif self.nfo_data is not None:
-            if verbose:
-                print(
-                    f'Gathering nfo data {self.filename.name} {self.nfo_files}')
-            self.imdb_link = self.nfo_data['imdb_link']
-            if verbose:
-                print(f'imdb link from nfo: {self.imdb_link}')
-
-        else:
-            pass
-            # print(f'No nfo/xml data for {self.filename.name}')
-
-    def rename_movie_path(self):
-        if verbose:
-            print(
-                f'Folder old: {os.path.basename(self.path)} corr: {self.correct_pathname}')
-        if not dry_run and self.rename_path_required:
-            try:
-                src_path = os.path.dirname(self.filename.path)
-                dst_path = os.path.dirname(
-                    self.path) + '/' + self.correct_pathname
-                os.rename(src=src_path, dst=dst_path)
-                self.rename_path_required = False
-                # self.filename.path = dst_path
-            except Exception as e:
-                print(f'Rename path failed {e}')
-
-                # exit(-1)
-        # pass
-    def rename_movie_file(self):
-        if verbose:
-            print(
-                f'Filename old: {self.filename.name} corr: {self.correct_filename} ')
-        if not dry_run and self.rename_file_required:
-            try:
-                src_file = os.path.dirname(
-                    self.basename) + '/' + self.filename.name
-                dst_file = os.path.dirname(
-                    self.basename) + '/' + self.correct_filename
-                os.rename(src=src_file, dst=dst_file)
-                # self.filename.name = dst_file
-                self.rename_file_required = False
-            except AttributeError as e:
-                print(f'Rename err {e}')
-
-            except Exception as e:
-                print(f'Rename file failed {e}')
-
-                # exit(-1)
-        # pass
-
-
-def scan_path(path, extensions, min_size=0):
-    # scan given path for movies with valid extensions and larger than min_size
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            yield from scan_path(entry.path, extensions, min_size)
-        else:
-            if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
-                yield entry
 
 
 def fix_base_folder(start_dir, file_list):
@@ -251,13 +182,68 @@ def fix_filenames(start_dir, file_list):
     return file_list
 
 
+def fix_names(folder):
+    # check if folder and files are named correctly, rename with info from xml
+    found_xml = False
+    # xml_files = []
+    xml_files = glob.glob(folder.path + '/*.xml')
+    if len(xml_files) > 1:
+        print(f'found more than 1 xml {folder.path} - Calling xml combiner...')
+        xml_files = merge_xml_files(xml_files, dry_run)
+        # exit(-1)
+    if len(xml_files) == 1:
+        if verbose:
+            pass
+            # print(f'Found xml {len(xml_files)}, reading {xml_files[0].path}')
+        data = get_xml_data(xml_files[0])
+        # todo move this stuff to get_xml_data....
+        xmldata = data.get('movie', None)
+        xmldata2 = data.get('Title', None)
+        if xmldata is not None:
+            if verbose:
+                pass
+                # print(f'xml type 1')
+            title = xmldata.get('title')
+            year = xmldata.get('year')
+            imdb_id = xmldata.get('id', None)
+            if title is None and year is None and imdb_id is not None:
+                if verbose:
+                    print(f'Need to scrape for imdb id: {imdb_id} {xml_files[0]}')
+                imdb_data = imdb_scrape(imdb_id)
+                return False
+            elif title is None and year is None and imdb_id is None:
+                if verbose:
+                    print(f'No data found {xml_files[0]}')
+                return False
+        elif xmldata2 is not None:
+            if verbose:
+                pass
+                # print('xml type 2')
+            title = xmldata2.get('OriginalTitle')
+            year = xmldata2.get('ProductionYear')
+            imdb_id = xmldata2.get('IMDbId', None)
+            if title is None and year is None and imdb_id is not None:
+                if verbose:
+                    print(f'Need to scrape for imdb id: {imdb_id} {xml_files[0]}')
+                imdb_data = imdb_scrape(imdb_id)
+                return False
+            elif title is None and year is None and imdb_id is None:
+                if verbose:
+                    print(f'No data found {xml_files[0]}')
+                return False
+        if verbose:
+            print(f't:{title} y: {year} id:{imdb_id} {xml_files[0]}')
+
+
 def clean_subfolder(base_folder):
     if verbose:
-        print(f'Cleaning {base_folder}')
+        pass
+        # print(f'clean_subfolder start: {base_folder}')
     for d in os.scandir(base_folder):
         if os.path.isdir(d):
             if verbose:
-                print(f'Cleaning unwanted subfolders {d.name}')
+                pass
+                # print(f'Checking folder: {d.name}')
             if d.name.lower() in unwanted_files['subdirs']:
                 print(f'{d.path} is unwanted, delete!')
                 if not dry_run:
@@ -269,44 +255,15 @@ def clean_subfolder(base_folder):
                         print(f'Delete subfolder {d.path} failed {e}')
                         # exit(-1)
         else:
-            print(f'clean unwanted files from {d.name}')
-    
-def clean_subfolders(folder_list):
-    # clean unwanted files from movie folders
-    print(f'Clean_subfolders: {folder_list}')
-    for subdir in folder_list:
-        # are we in a subdir
-        search_dir = os.path.dirname(subdir.path)
-        if os.path.isdir(search_dir):
-            file_list = []
-            for entry in scan_path(search_dir, '*', min_size=0):
-                file_list.append(entry)
-        for file in file_list:
-            filename = file.name.lower()
-            if filename in unwanted_files['txtfiles']:
+            if d.name.lower() in unwanted_files['txtfiles'] or d.name.lower() in unwanted_files['videos'] or d.name.lower() in unwanted_files['images']:
                 if verbose:
-                    print(
-                        f'\t{filename} in unwanted txtfiles in subdir {search_dir}')
+                    print(f'Unwanted file: {d.path}')
                 if not dry_run:
-                    os.remove(file)
-            if filename in unwanted_files['images']:
-                if verbose:
-                    print(
-                        f'\t{filename} in unwanted images in subdir {search_dir}')
-                if not dry_run:
-                    os.remove(file)
-            if filename in unwanted_files['videos']:
-                if verbose:
-                    print(
-                        f'\t{filename} in unwanted videos in subdir {search_dir}')
-                if not dry_run:
-                    os.remove(file)
-            if file.path.lower() in unwanted_files['subdirs']:
-                # if verbose:
-                print(f'\t{filename} in unwanted {search_dir}')
-                if not dry_run:
-                    print(f'TODO Removing subdir {filename}')
-                    # os.remove(file)
+                    try:
+                        os.remove(d.path)
+                    except Exception as e:
+                        print(f'Could not delete {d.path} {e}')
+
 
 
 def populate_movielist(file_list):
@@ -319,105 +276,6 @@ def populate_movielist(file_list):
         movie_list.append(movie)
     return movie_list
 
-
-def check_nfo_files(file_list):
-    # todo
-    # scan path for multiple / invalid nfo / xml files
-    # merge into one valid xml
-    # delete remaining nfo / xml
-    invalid_file_counter = 0
-    invalid_files = []
-    print(f'Scanning NFO/XML/TXT')
-    for file in file_list:
-        nfolist = scan_path(os.path.dirname(file.path), valid_nfo_files, min_size=1)
-        nfo_nfocounter = 0
-        xml_nfocounter = 0
-        txt_nfocounter = 0
-        # merge_needed = False
-        xml_files_to_merge = []
-        nfo_files_to_merge = []
-        txt_files_to_merge = []
-        for nfo in nfolist:
-            if nfo.name.endswith('nfo'):
-                # result_xml_filename = nfo.path + '.tmp'
-                result_xml_filename = os.path.dirname(nfo) + '/' + os.path.basename(os.path.dirname(file.path)) + '.conerted.xml'
-                if not dry_run:
-                    os.rename(src=nfo.path, dst=nfo.path + '.invalid')
-                # os.path.dirname(nfo)
-                # os.path.basename(os.path.dirname(file.path))
-                nfo_extractor(nfo.path, result_xml_filename, dry_run)
-                if not is_valid_nfo(nfo):
-                    # not valid files, delete
-                    # todo delete, rename for now...
-                    # todo extract useful info, merge or convert to xml, then discard nfo files....
-                    invalid_file_counter += 1
-                    invalid_files.append(nfo)
-                    if verbose:
-                        print(f'Found invalid NFO {nfo.path}')
-                    new_name = nfo.path + '.invalid'
-                    if not dry_run:
-                        try:
-                            os.rename(src=nfo, dst=new_name)
-                        except Exception as e:
-                            print(f'check_nfo_files: {e}')
-                    # pass
-                else:
-                    nfo_nfocounter += 1
-                    nfo_files_to_merge.append(nfo)
-            if nfo.name.endswith('xml'):
-                if not is_valid_xml(nfo):
-                    # not valid xml, delete
-                    invalid_file_counter += 1
-                    invalid_files.append(nfo)
-                    if verbose:
-                        print(f'Found invalid NFO {nfo.path}')
-                    new_name = nfo.path + '.invalid'
-                    if not dry_run:
-                        os.rename(src=nfo, dst=new_name)
-                else:
-                    # todo check if xml filename is correct and rename if needed..... might be missing (year)
-                    if nfo.name == 'movie.xml':  # and xml_nfocounter == 1:
-                        # found only one xml, check correct name according to movie title
-                        title = get_xml_movie_title(nfo)
-                        new_nfo_name = os.path.dirname(nfo) + '/' + title + '.xml'
-                        if verbose:
-                            print(f'Renaming {nfo.path} to {new_nfo_name} according to found title: {title}')
-                        if not dry_run:
-                            os.rename(src=nfo.path, dst=new_nfo_name)
-                        title = None
-                        xml_nfocounter += 1
-                        xml_files_to_merge.append(new_nfo_name)
-                        # print(f'xml count is {xml_nfocounter} for {file.path} nfo file: {nfo.path} - found title is: {title}')
-                        # time.sleep(1)
-                    else:
-                        xml_nfocounter += 1
-                        xml_files_to_merge.append(nfo)
-            if nfo.name.endswith('txt'):
-                if not is_valid_txt(nfo):
-                    invalid_file_counter += 1
-                    invalid_files.append(nfo)
-                    if verbose:
-                        print(f'Found invalid txt {nfo.path}')
-                    new_name = nfo.path + '.invalid'
-                    if not dry_run:
-                        os.rename(src=nfo, dst=new_name)
-                    # no imdb link/id found in txt, discard...
-                else:
-                    txt_nfocounter += 1
-                    txt_files_to_merge.append(nfo)
-        if xml_nfocounter > 1:
-            # print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
-            # print(f'Merging files ... {files_to_merge}')
-            # merge_needed = True
-            xml_merge_nfo_files(xml_files_to_merge, dry_run)
-        if nfo_nfocounter >= 1 and xml_nfocounter >= 1:
-            # need to extract some info from nfo and keep only xml
-            print(f'nfo / xml merger needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
-        if nfo_nfocounter >= 1 and xml_nfocounter == 0:
-            # need to extract some info from nfo and keep only xml
-            print(f'nfo to xml conversion needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')            
-            # pass
-            # exit(-1)
 
 def get_folders(base_path):
     folders = []
@@ -435,19 +293,22 @@ def normalscan(start_dir):
         file_list.append(entry)
     # move movies in base folder to subfolders...
     # todo check if file exists in basefolder before calling fix_base_folder
-    file_list = fix_base_folder(start_dir, file_list)
+    # file_list = fix_base_folder(start_dir, file_list)
     # fix non-ascii foldernames
-    file_list = fix_foldernames(start_dir, file_list)
+    # file_list = fix_foldernames(start_dir, file_list)
     # fix non-ascii filenames
-    file_list = fix_filenames(start_dir, file_list)
+    # file_list = fix_filenames(start_dir, file_list)
     # clean subfolders of unwanted extra files
     folder_list = get_folders(start_dir)
     for folder in folder_list:
         clean_subfolder(folder)
+        # todo scan and merge nfo/xml first
+        fix_names(folder)
     exit(-1)
     # clean_subfolders(start_dir)
     # check for multiple nfo/xml and merge into one file
-    check_nfo_files(file_list)
+    # todo change this..... check only one movie folder at a time, then check folder/file naming
+    # check_nfo_files(file_list, dry_run, verbose)
     # rescan .... todo fix
     file_list = []
     # populate movie list from base folder...
@@ -456,8 +317,31 @@ def normalscan(start_dir):
 
     return file_list
 
+def check_main_thread(thread):
+    return thread.isAlive()
 
-if __name__ == '__main__':
+def stop_main(thread):
+    thread.join()
+    exit(0)
+
+def main_program(args):
+    thread = list()
+    main_thread = MainThread('MainThread', base_path = args.path, verbose = args.verbose, dry_run=args.dryrun)
+    main_thread.setDaemon = True
+    main_thread.start()
+    while check_main_thread(main_thread):
+        try:
+            cmd = input('>')
+            if cmd[:1] == 'q':
+                stop_main(main_thread)
+            if cmd[:1] == 'd':
+                main_thread.dump_folders()
+            if cmd[:1] == 'f':
+                main_thread.get_folders()
+        except KeyboardInterrupt:
+            stop_main(main_thread)
+
+def get_args():
     parser = argparse.ArgumentParser(description="moviething")
     parser.add_argument("--path", nargs="?", default="d:/movies",
                         help="Base movie folder", required=True, action="store",)
@@ -484,23 +368,26 @@ if __name__ == '__main__':
         verbose = True
     else:
         verbose = False
+    return parser.parse_args()
+
+if __name__ == '__main__':
     t1 = time.time()
+    args = get_args()
+    verbose = args.verbose
+    dry_run = args.dryrun
+    main_program(args)
     # base movie folder
     # each movie should reside in it's own subfolder - not in basemovie_dir
     # structure <drive>:/<movie base dir>/<movie title>
-    if args.import_path:
-        # todo write this
-        print('Starting impprt')
-        # exit(-1)
-    file_list = normalscan(basemovie_dir)
+#    file_list = normalscan(basemovie_dir)
     # populate movie list and gather info from existing  nfo/xml files
-    movie_list = populate_movielist(file_list)
-    imdb_links = 0
-    imdb_missing = 0
-    for movie in movie_list:
-        if movie.imdb_link is None:
-            imdb_missing += 1
-        else:
-            imdb_links += 1
-    print(f'moviecount: {len(movie_list)} time {time.time() - t1}')
-    print(f'valid links {imdb_links} missing {imdb_missing}')
+    # movie_list = populate_movielist(file_list)
+    # imdb_links = 0
+    # imdb_missing = 0
+    # for movie in movie_list:
+    #     if movie.imdb_link is None:
+    #         imdb_missing += 1
+    #     else:
+    #         imdb_links += 1
+    # print(f'moviecount: {len(movie_list)} time {time.time() - t1}')
+    # print(f'valid links {imdb_links} missing {imdb_missing}')

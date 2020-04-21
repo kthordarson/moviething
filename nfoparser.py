@@ -4,6 +4,7 @@
 # import codecs
 # import hashlib
 import os
+import glob
 # import platform
 import re
 import string
@@ -15,10 +16,14 @@ from lxml import etree as ET
 from collections import defaultdict
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
+from utils import scan_path
 # from pathlib import Path
 
 # import requests
 # import unidecode
+
+valid_nfo_files = ('nfo', 'xml', 'txt')
+
 
 valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
 char_limit = 255
@@ -40,6 +45,18 @@ class hashabledict(dict):
         return hash(tuple(sorted(self.items())))
 
 
+def combine_xml(files):
+    first = None
+    for filename in files:
+        data = ET.parse(filename).getroot()
+        if first is None:
+            first = data
+        else:
+            first.extend(data)
+    if first is not None:
+        result = ET.ElementTree(first)
+        return result
+
 class XMLCombiner(object):
     # https://stackoverflow.com/questions/14878706/merge-xml-files-with-nested-elements-without-external-libraries
     def __init__(self, filenames):
@@ -47,7 +64,7 @@ class XMLCombiner(object):
         self.roots = []
         for f in filenames:
             try:
-                root = ET.parse(f.path).getroot()
+                root = ET.parse(f).getroot()
                 self.roots.append(root)
             except Exception as e:
                 print(f'XMLCombiner: Error parsing xml {f} {e}')
@@ -315,10 +332,30 @@ def etree_to_dict(t):
 def get_xml_data(file):
     # read xml data from file, convert to dict and return dict with parsed movie info
     xml_data = None
-    tree = ET.parse(source=file)
-    root = tree.getroot()
-    xml_data = etree_to_dict(root)
-    return xml_data
+    try:
+        tree = ET.parse(file)
+        root = tree.getroot()
+        xml_data = etree_to_dict(root)
+        root_tag = root.tag
+        basedata = xml_data.get(root_tag)
+        if root_tag == 'Title':
+            id_str = 'IMDbId'
+            title_str = 'OriginalTitle'
+            year_str = 'ProductionYear'
+        elif root_tag == 'movie':
+            id_str = 'id'
+            title_str = 'title'
+            year_str = 'year'
+        id = basedata.get(id_str)
+        title = basedata.get(title_str)
+        year = basedata.get(year_str)
+        if type(id) == list:
+            id = id[0]
+        print(f'{os.path.dirname(file)}: tag: {root_tag} id: {id} t: {title} y:{year}')
+        return xml_data
+    except Exception as e:
+        print(f'ERROR: get_xml_data {file} {e}')
+        return None
 
 
 def is_valid_xml(file):
@@ -355,10 +392,11 @@ def get_xml_movie_title(nfo_file):
     return title
 
 
-def xml_merge_nfo_files(files, dry_run):
+def merge_xml_files(files, dry_run):
     # merger...
     # todo fix output filename
-    r = XMLCombiner(files).combine()
+    # r = XMLCombiner(files).combine()
+    r = combine_xml(files)
     result = ET.ElementTree(element=r.getroot())
     guess_regex = re.compile(r'^(.*)[^\(](\(\d{4}\)$)')
     title = result.find('title')
@@ -370,36 +408,32 @@ def xml_merge_nfo_files(files, dry_run):
         guess = re.search(guess_regex, guess_data)
         title = guess.group(1)
         year = guess.group(2)
-    # if title is None:
-    #     guessed_title = os.path.basename(os.path.dirname(files[0].path))
-    #     print(f'xml_merge_nfo: got no title {files}')
-    #     print(f'Guessed title {guessed_title}')
-    #     # exit(-1)
-    
-    # if year is None:
-    #     print(f'xml_merge_nfo: got no year {files}')
-    #     exit(-1)
+    if title is None or year is None:
+        exit(-1)
 
     # todo rename / delete old files
     for file in files:
-        new_name = file.path + '.old_data'
+        new_name = file + '.old_data'
         try:
             if not dry_run:
                 os.rename(src=file, dst=new_name)
-            print(f'file: {file.path} renamed to {new_name}')
+            print(f'file: {file} renamed to {new_name}')
         except Exception as e:
             print(f'Rename {file} failed {e}')
-            # return False
-    final_xml = os.path.dirname(files[0]) + '/' + sanatized_string(title) + ' (' + year + ').merged.xml'
+            exit(-1)
+    final_xml = (os.path.dirname(files[0]) + '/' + sanatized_string(title) + ' (' + year + ').merged.xml')
     print(f'Saving merged xml as {final_xml}')
-    if not dry_run:
-        try:
+    try:
+        if not os.path.exists(final_xml):
             result.write(final_xml, xml_declaration=True, encoding='utf-8')
-            return True
-        except Exception as e:
-            print(f'Error saving final xml {e}')
-            return False
-    return True
+            return final_xml
+        else:
+            print(f'{final_xml} already exists....')
+            return final_xml
+    except Exception as e:
+        print(f'Error saving final xml {e}')
+        exit(-1)
+    return final_xml
 
 def nfo_extractor(nfo_file, result_file, dry_run):
     root = ET.Element('movie')
@@ -459,6 +493,105 @@ def nfo_extractor(nfo_file, result_file, dry_run):
         return False
     return True
 
+
+def check_nfo_files(file_list, dry_run, verbose):
+    # todo
+    # scan path for multiple / invalid nfo / xml files
+    # merge into one valid xml
+    # delete remaining nfo / xml
+    invalid_file_counter = 0
+    invalid_files = []
+    print(f'Scanning NFO/XML/TXT')
+    for file in file_list:
+        nfolist = scan_path(os.path.dirname(file.path), valid_nfo_files, min_size=1)
+        nfo_nfocounter = 0
+        xml_nfocounter = 0
+        txt_nfocounter = 0
+        # merge_needed = False
+        xml_files_to_merge = []
+        nfo_files_to_merge = []
+        txt_files_to_merge = []
+        for nfo in nfolist:
+            if nfo.name.endswith('nfo'):
+                # result_xml_filename = nfo.path + '.tmp'
+                result_xml_filename = os.path.dirname(nfo) + '/' + os.path.basename(os.path.dirname(file.path)) + '.converted.xml'
+                if not dry_run:
+                    os.rename(src=nfo.path, dst=nfo.path + '.invalid')
+                # os.path.dirname(nfo)
+                # os.path.basename(os.path.dirname(file.path))
+                nfo_extractor(nfo.path, result_xml_filename, dry_run)
+                if not is_valid_nfo(nfo):
+                    # not valid files, delete
+                    # todo delete, rename for now...
+                    # todo extract useful info, merge or convert to xml, then discard nfo files....
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid NFO {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        try:
+                            os.rename(src=nfo, dst=new_name)
+                        except Exception as e:
+                            print(f'check_nfo_files: {e}')
+                    # pass
+                else:
+                    nfo_nfocounter += 1
+                    nfo_files_to_merge.append(nfo)
+            if nfo.name.endswith('xml'):
+                if not is_valid_xml(nfo):
+                    # not valid xml, delete
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid NFO {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        os.rename(src=nfo, dst=new_name)
+                else:
+                    # todo check if xml filename is correct and rename if needed..... might be missing (year)
+                    if nfo.name == 'movie.xml':  # and xml_nfocounter == 1:
+                        # found only one xml, check correct name according to movie title
+                        title = get_xml_movie_title(nfo)
+                        new_nfo_name = os.path.dirname(nfo) + '/' + title + '.xml'
+                        if verbose:
+                            print(f'Renaming {nfo.path} to {new_nfo_name} according to found title: {title}')
+                        if not dry_run:
+                            os.rename(src=nfo.path, dst=new_nfo_name)
+                        title = None
+                        xml_nfocounter += 1
+                        xml_files_to_merge.append(new_nfo_name)
+                        # print(f'xml count is {xml_nfocounter} for {file.path} nfo file: {nfo.path} - found title is: {title}')
+                        # time.sleep(1)
+                    else:
+                        xml_nfocounter += 1
+                        xml_files_to_merge.append(nfo)
+            if nfo.name.endswith('txt'):
+                if not is_valid_txt(nfo):
+                    invalid_file_counter += 1
+                    invalid_files.append(nfo)
+                    if verbose:
+                        print(f'Found invalid txt {nfo.path}')
+                    new_name = nfo.path + '.invalid'
+                    if not dry_run:
+                        os.rename(src=nfo, dst=new_name)
+                    # no imdb link/id found in txt, discard...
+                else:
+                    txt_nfocounter += 1
+                    txt_files_to_merge.append(nfo)
+        if xml_nfocounter > 1:
+            # print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
+            # print(f'Merging files ... {files_to_merge}')
+            # merge_needed = True
+            merge_xml_files(xml_files_to_merge, dry_run)
+        if nfo_nfocounter >= 1 and xml_nfocounter >= 1:
+            # need to extract some info from nfo and keep only xml
+            print(f'nfo / xml merger needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')
+        if nfo_nfocounter >= 1 and xml_nfocounter == 0:
+            # need to extract some info from nfo and keep only xml
+            print(f'nfo to xml conversion needed for {os.path.dirname(file)} nfo {nfo_nfocounter} xml {xml_nfocounter}')            
+            # pass
+            # exit(-1)
 if __name__ == '__main__':
     # file = 'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.nfo'
     # file = 'd:/movies/[AnimeRG] Laputa Castle in the Sky (1986) [MULTI-AUDIO] [1080p] [x265] [pseudo]/torrent.nfo'
@@ -479,9 +612,28 @@ if __name__ == '__main__':
     )
     files = ('o:/Movies/Movies/9 Songs (2004)/9 Songs cd2.orig.txt',)
     merge_files = (
-        'c:/Users/kthor/Documents/development/moviething/oldstuff/movie.xml',
+        'o:/Movies/Movies/Shark Tale (2004)/Shark Tale (2004).xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml',
-        'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One 2012.xml')
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/test/Movie (125).xml',
+    )
     nfotest = 'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.nfo'
-    nfo_extractor(nfotest, 'testingstuff/testout.xml')
-    #xml_merge_nfo_files(merge_files)
+    nfotest = 'o:/Movies/Movies/Shark Tale (2004)/Shark Tale (2004).xml'
+#    xml_files = glob.glob('c:/Users/kthor/Documents/development/moviething/oldstuff/test/' + '/*.xml')
+    xml_files = glob.glob('o:/movies/movies' + '/**/*.xml', recursive=True)
+    testfiles = (
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/test/test1.xml',
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/test/test2.xml',
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/test/test3.xml',
+        'c:/Users/kthor/Documents/development/moviething/oldstuff/test/test4.xml',
+    )
+    testmerge = (
+        'o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa.xml',
+        'o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa (2015).xml',
+    )
+    merge_xml_files(testmerge, dry_run=True)
+    # d = combine_xml(testmerge)
+    # print(d)
+    # e = ET.ElementTree(d)
+    # e.write('o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa (2015)-merged.xml')
+        #d = merge_xml_files(testmerge, dry_run=True)
+    #merge_xml_files(merge_files)
