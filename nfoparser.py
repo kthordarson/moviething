@@ -26,7 +26,7 @@ def combine_xml(files):
         result = ET.ElementTree(first)
         return result
 
-class hashabledict(dict):
+class HashableDict(dict):
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
 
@@ -62,17 +62,17 @@ class XMLCombiner(object):
         """
         # Create a mapping from tag name to element, as that's what we are fltering with
         # mapping = {el.tag: el for el in one}
-        mapping = {(el.tag, hashabledict(el.attrib)): el for el in one}
+        mapping = {(el.tag, HashableDict(el.attrib)): el for el in one}
         for el in other:
             if len(el) == 0:
                 # Not nested
                 try:
                     # Update the text
                     # mapping[el.tag].text = el.text
-                    mapping[(el.tag, hashabledict(el.attrib))].text = el.text
+                    mapping[(el.tag, HashableDict(el.attrib))].text = el.text
                 except KeyError:
                     # An element with this name is not in the mapping
-                    mapping[(el.tag, hashabledict(el.attrib))] = el
+                    mapping[(el.tag, HashableDict(el.attrib))] = el
                     # mapping[el.tag] = el
                     # Add it
                     one.append(el)
@@ -81,44 +81,29 @@ class XMLCombiner(object):
                     # Recursively process the element, and update it in the same way
                     # self.combine_element(mapping[el.tag], el)
                     self.combine_element(
-                        mapping[(el.tag, hashabledict(el.attrib))], el)
+                        mapping[(el.tag, HashableDict(el.attrib))], el)
                 except KeyError:
                     # Not in the mapping
                     # mapping[el.tag] = el
-                    mapping[(el.tag, hashabledict(el.attrib))] = el
+                    mapping[(el.tag, HashableDict(el.attrib))] = el
                     # Just add it
                     one.append(el)
 
 
-def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
-    # replace spaces
-    for r in replace:
-        input_string = input_string.replace(r, '_')
-
-    # keep only valid ascii chars
-    cleaned_input_string = unicodedata.normalize(
-        'NFKD', input_string).encode('ASCII', 'ignore').decode()
-
-    # keep only whitelisted chars
-    cleaned_input_string = ''.join(
-        c for c in cleaned_input_string if c in whitelist)
-    if len(cleaned_input_string) > char_limit:
-        print("Warning, input_string truncated because it was over {}. input_strings may no longer be unique".format(char_limit))
-    return cleaned_input_string[:char_limit]
 
 
 def get_nfo_data(file):
     nfo_data = {}
     nfo_file = open(file, encoding='utf-8', errors='ignore')
     nfo_raw = nfo_file.readlines()
-    regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+    # regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
     mediacheck_mi_1 = False
     mediacheck_mi_2 = False
     # check_mi_2 = False
     is_mediainfofile = False
     imdb_link = None
     for line in nfo_raw:
-        match = re.search(regex, line)
+        match = re.search(imdb_regex, line)
         if match:
             imdb_link = match[0]
         if '[mediainfo]' in line:
@@ -175,13 +160,13 @@ def extract_mediainfo_tags(file):
             audiopart = False
             # print('menu')
             # print(line)
-        if mediainfo and (videopart or audiopart):
+        if mediainfo and (videopart or audiopart) and ':' in line:
             # line = line.strip()
-            if ':' in line:
-                tag, value = line.split(':', maxsplit=1)
-                tag = part_tag + ' ' + tag.strip()
-                value = value.strip()
-                tag_list[tag] = value
+            # if ':' in line:
+            tag, value = line.split(':', maxsplit=1)
+            tag = part_tag + ' ' + tag.strip()
+            value = value.strip()
+            tag_list[tag] = value
                 # print(f'{part_tag} tag: {tag}  ---- {value}')
     # tags = sorted(set(tag_list))
     return tag_list
@@ -189,8 +174,8 @@ def extract_mediainfo_tags(file):
 
 def is_valid_txt(file):
     # try to find valid imdb link from txt file
-    regex_imdb = re.compile(
-        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+    # regex_imdb = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+
     try:
         data = open(file, 'r', encoding='utf-8').read()
     except Exception as e:
@@ -198,7 +183,7 @@ def is_valid_txt(file):
         data = None
         return False
     if data is not None:
-        check_imdb = re.findall(regex_imdb, data)
+        check_imdb = re.findall(imdb_regex, data)
         if len(check_imdb) >= 1:
             # contains valid imdb link return True
             # print(check_imdb)
@@ -212,8 +197,7 @@ def is_valid_nfo(file):
     regex_mi_1 = r'\[mediainfo\]'
     regex_mi_2 = r'\[\/mediainfo\]'
     # regex to find imdb link
-    regex_imdb = re.compile(
-        r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+    # regex_imdb = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
     check_mi_1 = False
     check_mi_2 = False
     data = None
@@ -229,7 +213,7 @@ def is_valid_nfo(file):
         if len(check_mi_1) + len(check_mi_2) == 2:
             # contains valid mediainfo, return True
             return True
-        check_imdb = re.findall(regex_imdb, data)
+        check_imdb = re.findall(imdb_regex, data)
         if len(check_imdb) >= 1:
             # contains valid imdb link return True
             # print(check_imdb)
@@ -238,8 +222,8 @@ def is_valid_nfo(file):
 
 
 class XmlListConfig(list):
-    def __init__(self, aList):
-        for element in aList:
+    def __init__(self, a_list):
+        for element in a_list:
             if element:
                 if len(element) == 1 or element[0].tag != element[1].tag:
                     self.append(XmlDictConfig(element))
@@ -258,12 +242,12 @@ class XmlDictConfig(dict):
         for element in parent_element:
             if element:
                 if len(element) == 1 or element[0].tag != element[1].tag:
-                    aDict = XmlDictConfig(element)
+                    a_dict = XmlDictConfig(element)
                 else:
-                    aDict = {element[0].tag: XmlListConfig(element)}
+                    a_dict = {element[0].tag: XmlListConfig(element)}
                 if element.items():
-                    aDict.update(dict(element.items()))
-                self.update({element.tag: aDict})
+                    a_dict.update(dict(element.items()))
+                self.update({element.tag: a_dict})
             elif element.items():
                 self.update({element.tag: dict(element.items())})
             else:
@@ -277,16 +261,18 @@ def get_xml_dict(file):
     # print(xmldict)
     return xmldict
 
-
+def etree_get_dchildren(children):
+    dd = defaultdict(list)
+    for dc in map(etree_to_dict, children):
+        for k, v in dc.items():
+            dd[k].append(v)
+    return dd
 def etree_to_dict(t):
     # from https://stackoverflow.com/questions/7684333/converting-xml-to-dictionary-using-elementtree
     d = {t.tag: {} if t.attrib else None}
     children = list(t)
     if children:
-        dd = defaultdict(list)
-        for dc in map(etree_to_dict, children):
-            for k, v in dc.items():
-                dd[k].append(v)
+        dd = etree_get_dchildren(children)
         d = {t.tag: {k: v[0] if len(v) == 1 else v
                      for k, v in dd.items()}}
     if t.attrib:
@@ -313,18 +299,18 @@ def get_xml_data(file):
         basedata = xml_data.get(root_tag)
         if root_tag == 'Title':
             id_str = 'IMDbId'
-            title_str = 'OriginalTitle'
-            year_str = 'ProductionYear'
+            # title_str = 'OriginalTitle'
+            # year_str = 'ProductionYear'
         elif root_tag == 'movie':
             id_str = 'id'
-            title_str = 'title'
-            year_str = 'year'
+            # title_str = 'title'
+            # year_str = 'year'
         id = basedata.get(id_str)
-        title = basedata.get(title_str)
-        year = basedata.get(year_str)
+        # title = basedata.get(title_str)
+        # year = basedata.get(year_str)
         if type(id) == list:
             id = id[0]
-        print(f'{os.path.dirname(file)}: tag: {root_tag} id: {id} t: {title} y:{year}')
+        # print(f'{os.path.dirname(file)}: tag: {root_tag} id: {id} t: {title} y:{year}')
         return xml_data
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
@@ -346,14 +332,18 @@ def is_valid_xml(file):
 def get_xml(movie_path):
     # scan movie_path for valid xml, return first xml found
     # todo fix if more than one found.....
+    # print(f'get_xml {movie_path}')
     xml = None
     try:
-        xml = glob.glob(movie_path.path + '/*.xml') #movie_path+'/*.xml')
+        xml = glob.glob(movie_path.path + '/*.xml', recursive=False) #movie_path+'/*.xml')
+        # print(f'got xml {xml}')
     except Exception as e:
         print(f'Error in get_xml {movie_path.path} {e}')
         return None
     if len(xml) == 0:
         return None
+    if len(xml) > 1:
+        print(f'Multiple xml found in {movie_path}')
     else:
         return xml[0]
 
@@ -367,7 +357,7 @@ def get_xml_movie_title(nfo_file):
         movie_year = root.find('year').text
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'
         return title
-    except Exception as e:
+    except Exception: # as e:
         return None
     return None
 
@@ -415,13 +405,63 @@ def merge_xml_files(files, dry_run):
         exit(-1)
     return final_xml
 
+def get_imdb_from_line(line):
+    imdb_id_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
+    imdb_match = re.search(imdb_id_regex, line)
+    if imdb_match:
+        imdb_link = imdb_match.group(0)
+        imdb_id = imdb_match.group(1)
+        return (imdb_link, imdb_id)
+    else:
+        imdb_link = None
+        imdb_id = None
+    return (imdb_link, imdb_id)
+
+
+def save_result_xml(root, result_file, tag_count, nfo_file, dry_run):
+    tree = ET.ElementTree(root)
+    try:
+        tree.write(result_file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+        print(f'Extracted {tag_count} from {nfo_file} saved as {result_file}')            
+        if not dry_run:
+            os.rename(src=nfo_file, dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + invalid_string)
+    except Exception as e:
+        print(f'save_result_xml error: {e}')
+        exit(-1)
+
+def get_tag_value_from_line(line, root):
+    tag = None
+    value = None
+    # tag, value = line.split(':', maxsplit=1).lower().strip()
+    try:
+        (tag,value) = [sanatized_string(x.lower().strip()) for x in line.split(':', maxsplit=1)]
+    except:
+        pass
+    if tag == 'id': 
+        tag = None # used by imdb
+        value = None
+        return (tag, value)
+    if tag in mediainfo_tags:
+        tag = tag.replace(' ', '')
+        if tag and value:
+            a = ET.SubElement(root,tag)
+            a.text = value
+        else:
+            tag = None
+            value = None            
+    return (tag, value)
+
 def nfo_extractor(nfo_file, result_file, dry_run):
+    # extract data from .nfo files, convert to xml and save as result_file
+    # rename old nfo after extraction
+    # discard nfo files with no extractable info
+
     root = ET.Element('movie')
     tree = ET.ElementTree(element=root)
     root = tree.getroot()
-    imdb_link = None
-    imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
-    tag_regex_1 = re.compile(r"^(\w|\s)+[^\.]")
+    imdb_valid = False
+    
+    # tag_regex_1 = re.compile(r"^(\w|\s)+[^\.]")
     try:
         f = open(nfo_file, mode='r', encoding='utf-8', errors='ignore')
     except FileNotFoundError as e:
@@ -430,63 +470,37 @@ def nfo_extractor(nfo_file, result_file, dry_run):
     lines = f.read().split('\n')
     tag_count = 0
     for line in lines:
-        imdb_match = re.search(imdb_regex, line)
-        if imdb_match:
-            imdb_link = imdb_match.group(0)
-            imdb_id = imdb_match.group(1)
+        imdb_link, imdb_id = get_imdb_from_line(line)
+        if imdb_link is not None and imdb_id is not None:
             a = ET.SubElement(root,'imdb_link')
             a.text = imdb_link
             a = ET.SubElement(root,'id')
             a.text = imdb_id
             tag_count += 1
+            imdb_valid = True
         else:
-            try:
-                tag, value = line.split(':', maxsplit=1)
-                tag = tag.strip()
-#                tag = tag.replace(' ','')
-                value = value.strip()
-                if tag == 'ID': tag = None # used by imdb
-                if tag.lower() in mediainfo_tags:
-                    tag = tag.replace(' ', '')
-                    tag_count += 1
-                    # print(f't: {tag} v: {value} c: {tag_count}')
-                    a = ET.SubElement(root,tag)
-                    a.text = value
-                    
-            except:
-                pass
-    if imdb_link is not None:
-        tree = ET.ElementTree(root)
-        try:
-            tree.write(result_file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
-            print(f'Extracted {tag_count} from {nfo_file} saved as {result_file}')            
-            if not dry_run:
-                os.rename(src=nfo_file, dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + '.invalid')
-            return True
-        except Exception as e:
-            print(f'{e}')
-            exit(-1)
+            tag, value = get_tag_value_from_line(line, root)
+    if imdb_valid:
+        save_result_xml(root, result_file, tag_count, nfo_file, dry_run)
     else:
         print(f'No IMDB link/id found in {nfo_file}')
         if not dry_run:
-            os.rename(src=nfo_file,  dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + '.invalid')
+            os.rename(src=nfo_file,  dst=os.path.dirname(nfo_file) + junkpathname + '/' + nfo_file + invalid_string)
         return False
-    return True
-
 
 def check_nfo_files(file_list, dry_run, verbose):
-    # todo
+    # todo refactor...
     # scan path for multiple / invalid nfo / xml files
     # merge into one valid xml
     # delete remaining nfo / xml
-    invalid_file_counter = 0
+    # invalid_file_counter = 0
     invalid_files = []
     print(f'Scanning NFO/XML/TXT')
     for file in file_list:
         nfolist = scan_path(os.path.dirname(file.path), valid_nfo_files, min_size=1)
         nfo_nfocounter = 0
         xml_nfocounter = 0
-        txt_nfocounter = 0
+        # txt_nfocounter = 0
         # merge_needed = False
         xml_files_to_merge = []
         nfo_files_to_merge = []
@@ -496,7 +510,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                 # result_xml_filename = nfo.path + '.tmp'
                 result_xml_filename = os.path.dirname(nfo) + '/' + os.path.basename(os.path.dirname(file.path)) + '.converted.xml'
                 if not dry_run:
-                    os.rename(src=nfo.path, dst=nfo.path + '/' + junkpathname + '/' + '.invalid')
+                    os.rename(src=nfo.path, dst=nfo.path + '/' + junkpathname + '/' + invalid_string)
                 # os.path.dirname(nfo)
                 # os.path.basename(os.path.dirname(file.path))
                 nfo_extractor(nfo.path, result_xml_filename, dry_run)
@@ -504,7 +518,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                     # not valid files, delete
                     # todo delete, rename for now...
                     # todo extract useful info, merge or convert to xml, then discard nfo files....
-                    invalid_file_counter += 1
+                    # invalid_file_counter += 1
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid NFO {nfo.path}')
@@ -521,12 +535,12 @@ def check_nfo_files(file_list, dry_run, verbose):
             if nfo.name.endswith('xml'):
                 if not is_valid_xml(nfo):
                     # not valid xml, delete
-                    invalid_file_counter += 1
+                    # invalid_file_counter += 1
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid NFO {nfo.path}')
                     # new_name = nfo.path + '.invalid'
-                    new_name = os.path.dirname(nfo.path) + '/' + junkpathname + '/' + nfo.name + '.invalid'
+                    new_name = os.path.dirname(nfo.path) + '/' + junkpathname + '/' + nfo.name + invalid_string
                     if not dry_run:
                         os.rename(src=nfo, dst=new_name)
                 else:
@@ -549,7 +563,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                         xml_files_to_merge.append(nfo)
             if nfo.name.endswith('txt'):
                 if not is_valid_txt(nfo):
-                    invalid_file_counter += 1
+                    # invalid_file_counter += 1
                     invalid_files.append(nfo)
                     if verbose:
                         print(f'Found invalid txt {nfo.path}')
@@ -559,7 +573,7 @@ def check_nfo_files(file_list, dry_run, verbose):
                         os.rename(src=nfo, dst=new_name)
                     # no imdb link/id found in txt, discard...
                 else:
-                    txt_nfocounter += 1
+                    # txt_nfocounter += 1
                     txt_files_to_merge.append(nfo)
         if xml_nfocounter > 1:
             # print(f'multiple nfo  {nfocounter} {len(files_to_merge)} founds merge needed {os.path.dirname(nfo)}')
@@ -599,7 +613,7 @@ if __name__ == '__main__':
         'c:/Users/kthor/Documents/development/moviething/oldstuff/test/Movie (125).xml',
     )
     nfotest = 'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.nfo'
-    nfotest = 'o:/Movies/Movies/Shark Tale (2004)/Shark Tale (2004).xml'
+    #nfotest = 'o:/Movies/Movies/Shark Tale (2004)/Shark Tale (2004).xml'
 #    xml_files = glob.glob('c:/Users/kthor/Documents/development/moviething/oldstuff/test/' + '/*.xml')
     xml_files = glob.glob('o:/movies/movies' + '/**/*.xml', recursive=True)
     testfiles = (
@@ -620,12 +634,22 @@ if __name__ == '__main__':
     'd:/movies/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG/The.Shining.1980.US.1080p.BluRay.H264.AAC-RARBG.xml',
     'd:/movies/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG/Twelve.Monkeys.1995.1080p.BluRay.H264.AAC-RARBG.xml',
     )
-    for file in test1:
-        t = get_xml_movie_title(file)
-        print(t)
+    nfo1 = 'c:/Users/kthor/Documents/development/moviething/oldstuff/invalid/Zoolander 2 cd2.orig.nfo.invalid'
+    nfo1_out = 'c:/Users/kthor/Documents/development/moviething/oldstuff/invalid/Zoolander 2 cd2.orig.nfo.invalid.out'
+    nfo1_out = 'c:/Users/kthor/Documents/development/moviething/testingstuff/nfo.out.test'
+    nfo2 = 'd:\movies\Howls.Moving.Castle.2004.720p.BluRay.x264-x0r\Howls.Moving.Castle.2004.720p.BluRay.x264-x0r.nfo'
+    # nfo_extractor(nfotest,nfo1_out, dry_run=False)
+    testdir1 = 'd:/movies/[AnimeRG] Laputa Castle in the Sky (1986) [MULTI-AUDIO] [1080p] [x265] [pseudo]/'
+    #for nfo_in in nfotest:
+    #    nfo_extractor(nfo_in,nfo1_out, dry_run=False)
+    #for file in test1:
+    #    t = get_xml_movie_title(file)
+    #    print(t)
     # d = combine_xml(testmerge)
     # print(d)
     # e = ET.ElementTree(d)
     # e.write('o:/Movies/Movies/Dirty Grandpa (2015)/Dirty Grandpa (2015)-merged.xml')
         #d = merge_xml_files(testmerge, dry_run=True)
     #merge_xml_files(merge_files)
+    
+

@@ -16,11 +16,8 @@ import time
 import unidecode
 from threading import Thread
 from multiprocessing import Process, Queue, JoinableQueue
-from nfoparser import (
-    get_nfo_data, get_xml_data, is_valid_nfo,
-    is_valid_txt, is_valid_xml, merge_xml_files, sanatized_string,
-    get_xml_movie_title, nfo_extractor, check_nfo_files, valid_nfo_files)
-from utils import scan_path, get_folders, fix_names, clean_subfolder
+from nfoparser import *
+from utils import *
 from scrapers import imdb_scrape
 from defs import *
 from classes import *
@@ -35,23 +32,29 @@ def stop_main(thread):
 
 
 def main_program(args):
-    thread = list()
+    # thread = list()
     main_thread = MainThread('MainThread', base_path = args.path, verbose = args.verbose, dry_run=args.dryrun)
     main_thread.setDaemon = True
     main_thread.start()
     while check_main_thread(main_thread):
         try:
             cmd = input('>')
-            if cmd[:1] == 'q':
+            if cmd[:1] == 'i':
+                main_thread.get_status()
+            if cmd[:4] == 'quit' or cmd[:1] == 'q':
                 stop_main(main_thread)
-            if cmd[:1] == 'd':
+            if cmd[:4] == 'dump':
                 main_thread.dump_folders()
-            if cmd[:1] == 'f':
+            if cmd[:6] == 'movies':
+                main_thread.dump_movies()
+            if cmd[:2] == 'uf':
                 main_thread.update_folders()
             if cmd[:3] == 'fix':
                 main_thread.fix_names()
         except KeyboardInterrupt:
             stop_main(main_thread)
+        except Exception as e:
+            print(f'Exception {e}')
 
 def get_args():
     parser = argparse.ArgumentParser(description="moviething")
@@ -66,20 +69,20 @@ def get_args():
     args = parser.parse_args()
     if args.path:
         print(f'Basedir: {args.path}')
-        basemovie_dir = args.path
+        # basemovie_dir = args.path
     if args.import_path:
         print(f'Importing from: {args.import_path}')
-        import_path = args.import_path
-    if args.dryrun:
-        print(f'Dry run: {args.dryrun}')
-        dry_run = True
+        # import_path = args.import_path
     else:
         print(f'Dry run: {args.dryrun}')
-        dry_run = False
-    if args.verbose:
-        verbose = True
-    else:
-        verbose = False
+        # dry_run = True
+#    else:
+#        print(f'Dry run: {args.dryrun}')
+        # dry_run = False
+    # if args.verbose:
+    #     verbose = True
+    # else:
+    #     verbose = False
     return parser.parse_args()
 
 if __name__ == '__main__':

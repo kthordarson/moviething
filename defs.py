@@ -1,6 +1,9 @@
 # global definitions
 import string
+import re
 
+imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+# imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
 valid_nfo_files = ('nfo', 'xml', 'txt')
 
 
@@ -21,9 +24,11 @@ vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
 )
 
+
 min_filesize = 40000000
 
 junkpathname = 'junkignore'
+invalid_string = '.invalid'
 
 # unwanted files / subdirs
 # will be deleted automatically
