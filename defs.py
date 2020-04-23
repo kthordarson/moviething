@@ -3,6 +3,7 @@ import string
 import re
 
 imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+#imdb_regex = re.compile(r"http(?:s)?://(?:www\.)?imdb\.com/title/tt\d{7}")
 # imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
 valid_nfo_files = ('nfo', 'xml', 'txt')
 
@@ -18,7 +19,9 @@ mediainfo_tags = [
     'video display aspect ratio', 'video duration', 'video encoded date', 'video encoding settings', 'video format', 'video format profile',
     'video format settings, cabac', 'video format settings, reframes', 'video format/info', 'video frame rate', 'video frame rate mode',
     'video height', 'video id', 'video scan type', 'video stream size', 'video tagged date', 'video width', 'video writing library',
-    'format', 'id','format','format/info','format profile','format settings, cabac','format settings, reframes','codec id','codec id/info','duration','bit rate','width','height','display aspect ratio','frame rate mode','frame rate','color space','chroma subsampling','bit depth','scan type','bits/(pixel*frame)','stream size','writing library','encoded date','tagged date',
+    'format', 'id','format','format/info','format profile','format settings, cabac','format settings, reframes','codec id',
+    'codec id/info','duration','bit rate','width','height','display aspect ratio','frame rate mode','frame rate','color space',
+    'chroma subsampling','bit depth','scan type','bits/(pixel*frame)','stream size','writing library','encoded date','tagged date',
     ]
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'

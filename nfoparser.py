@@ -9,7 +9,7 @@ from lxml import etree as ET
 from collections import defaultdict
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
-from utils import *
+from stringutils import sanatized_string
 from defs import *
 # from classes import *
 
@@ -88,17 +88,15 @@ def get_xml(movie_path):
     # scan movie_path for valid xml, return first xml found
     # todo fix if more than one found.....
     # print(f'get_xml {movie_path}')
-    if movie_path is str:
+    if movie_path is not str:
         # for debugging and testing
-        input_movie_path.path = movie_path
+        input_movie_path = str(movie_path.path)
     else:
         input_movie_path = movie_path
     xml = None
     try:
         xml = glob.glob(input_movie_path + '/*.xml', recursive=False) #movie_path+'/*.xml')
         # print(f'got xml {xml}')
-    except Exception:
-        xml = glob.glob(input_movie_path.path + '/*.xml', recursive=False) 
     except Exception as e:
         print(f'Error in get_xml {input_movie_path} {e}')
         return None
@@ -119,9 +117,10 @@ def get_xml_movie_title(xml_file):
         movie_year = root.find('year').text
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'
         return title
-    except Exception: # as e:
+    except Exception as e:
+        print(f'get_xml_title: {xml_file} error {e}')
         return None
-    return None
+
 
 
 def test_get_xml_data(xmlfile):
@@ -147,7 +146,7 @@ if __name__ == '__main__':
         'o:/Movies/Movies/Zoolander 2 (2016)/Zoolander 2 cd2.orig.nfo',
 
     )
-    files = ('o:/Movies/Movies/9 Songs (2004)/9 Songs cd2.orig.txt',)
+    files = 'o:/Movies/Movies/9 Songs (2004)/9 Songs cd2.orig.txt'
     merge_files = (
         'o:/Movies/Movies/Shark Tale (2004)/Shark Tale (2004).xml',
         'c:/Users/kthor/Documents/development/moviething/oldstuff/The Lucky One (2012).xml',

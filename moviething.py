@@ -9,17 +9,6 @@ scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  '''
 import argparse
-import os
-import shutil
-import glob
-import time
-import unidecode
-from threading import Thread
-from multiprocessing import Process, Queue, JoinableQueue
-from nfoparser import *
-from utils import *
-from scrapers import imdb_scrape
-from defs import *
 from classes import *
 
 def check_main_thread(thread):
@@ -53,6 +42,8 @@ def main_program(args):
                 main_thread.fix_path_names()
             if cmd[:7] == 'fixfile':
                 main_thread.fix_file_names()
+            if cmd[:6] == 'import':
+                main_thread.import_from_path(cmd[7:])
         except KeyboardInterrupt:
             stop_main(main_thread)
         except Exception as e:

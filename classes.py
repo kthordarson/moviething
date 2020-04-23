@@ -1,11 +1,8 @@
 # classes
 from threading import Thread
-import os
 import time
-
-from nfoparser import *
 from utils import *
-
+from nfoparser import *
 class MainThread(Thread):
     def __init__ (self, name, base_path='d:/movies', verbose=True, dry_run=True):
         Thread.__init__(self)
@@ -33,6 +30,7 @@ class MainThread(Thread):
                 pass
                 # print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run}')
             time.sleep(1)
+
 
     def join(self):
         self.kill = True
@@ -114,9 +112,9 @@ class MainThread(Thread):
         self.update_folders()
         if input_folder is None:
             for movie_folder in self.folder_list:
-                sanatize_foldernames(movie_folder)
+                sanatize_foldernames(movie_folder, verbose=self.verbose, dry_run=self.verbose)
         else:
-            sanatize_foldernames(input_folder)
+            sanatize_foldernames(input_folder, verbose=self.verbose, dry_run=self.verbose)
         # refresh again incase of renames...
         self.update_folders()
 
@@ -138,7 +136,7 @@ class MainThread(Thread):
         # do nothing if no valid xml info was found
         
         if input_folder is None:
-            self.update_folders
+            self.update_folders()
             for movie_folder in self.folder_list:
                 fix_filenames_files(movie_folder, self.base_path, self.verbose, self.dry_run)
         else:
@@ -148,6 +146,11 @@ class MainThread(Thread):
         # scan movie_path for unwanted files, move to junkignore subfolder if found
         if self.verbose:
             print(f'clean_path: {movie_path}')
+
+    def import_from_path(self, import_path):
+        if self.verbose:
+            print(f'Importing from path: {import_path}')
+        check_import_path(import_path)
 
 class MovieClass(object):
     def __init__(self, movie_data, moviepath, moviefile):
@@ -182,10 +185,10 @@ class MovieClass(object):
     def get_year(self):
         year = None
         try:
-            year = self.movie_data.get('movie')['year']
+            year = self.movie_data.get('movie')['year'] or None
             return year
         except TypeError:
-            year = self.movie_data.get('movie')['ProductionYear']
+            year = self.movie_data.get('movie')['ProductionYear'] or None
             return year
         except Exception as e:
             print(f'get_year {self.moviepath} err {e}')
@@ -193,14 +196,11 @@ class MovieClass(object):
     def get_imdb_id(self):
         id = None
         try:
-            id = self.movie_data.get('movie')['id']
+            id = self.movie_data.get('movie')['id'] or None
             return id
         except TypeError:
-            id = self.movie_data.get('movie')['IMDbId']
+            id = self.movie_data.get('movie')['IMDbId'] or None
             return id
-        except TypeError as e:
-            print(f'get_imdb_id {self.moviepath}  typeerror ERR {e}')
-            return None
         except Exception as e:
             print(f'get_imdb_id {self.moviepath}  ERR {e}')
             return None

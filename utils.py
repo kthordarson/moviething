@@ -1,11 +1,8 @@
 # misc functions
-import os
-import shutil
-import glob
-from nfoparser import *
-from scrapers import imdb_scrape
+from nfoparser import get_xml_movie_title, get_xml
 from defs import *
-
+from stringutils import sanatized_string
+import os
 
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
@@ -51,36 +48,21 @@ def get_folders(base_path):
         exit(-1)
     return folders
 
-def get_video_filelist_old(movie_path):
-    # scan given move_path for valid video files, return first found
-    # todo handle multiple valid video files in movie_path
-    filelist = []
-    for root,dirs,files in os.walk(movie_path):
-        for file in files:
-            if file.endswith(vid_extensions)  and os.path.getsize(os.path.join(root,file)) > min_filesize:
-                filelist.append(os.path.join(root,file))
-    if len(filelist) > 1:
-        print(f'Mutiple vid files in {movie_path.path} skipping')
-        return None
-    if len(filelist) == 1:
-        return filelist[0]
-    else:
-        print(f'No videos in {movie_path.path}')
-        return None
 
-def get_video_filelist(movie_path):
+def get_video_filelist(movie_path, verbpse=True, dry_run=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
     filelist = []
     for file in scan_path(movie_path, vid_extensions, min_size=min_filesize):
         filelist.append(file)
     if len(filelist) > 1:
-        print(f'Mutiple vid files in {movie_path.path} skipping')
+        print(f'Mutiple vid files in {movie_path} skipping')
         return None
     if len(filelist) == 1:
         return filelist[0]
     else:
-        print(f'No videos in {movie_path.path}')
+        if verbose:
+            print(f'No videos in {movie_path}')
         return None
 
 # def get_video_filelist(movie_path):
@@ -89,21 +71,6 @@ def get_video_filelist(movie_path):
 #         file_list.append(entry)
 #     return file_list
 
-def sanatized_string(input_string, whitelist=valid_input_string_chars, replace=''):
-    # replace spaces
-    for r in replace:
-        input_string = input_string.replace(r, '_')
-
-    # keep only valid ascii chars
-    cleaned_input_string = unicodedata.normalize(
-        'NFKD', input_string).encode('ASCII', 'ignore').decode()
-
-    # keep only whitelisted chars
-    cleaned_input_string = ''.join(
-        c for c in cleaned_input_string if c in whitelist)
-    # if len(cleaned_input_string) > char_limit:
-    #    print("Warning, input_string truncated because it was over {}. input_strings may no longer be unique".format(char_limit))
-    return cleaned_input_string[:char_limit]
 
 def fix_filenames_path(movie_path, base_path, verbose, dry_run):
     # scan movie_path for valid xml, extract title and year, compare folder and filename, rename if needed
@@ -161,6 +128,16 @@ def fix_filenames_files(movie_path, base_path, verbose, dry_run):
                             os.rename(src=video_file, dst=dest)                        
                         except Exception as e:
                             print(f'fix_names rename failed {e}')
+
+def check_import_path(import_path, verbose=True, dry_run=True):
+    if verbose:
+        print(f'Checking path {import_path}')
+    if not os.path.exists(import_path):
+        if verbose:
+            print(f'Import path: {import_path} not found')
+        return False
+    else:
+        print(get_video_filelist(import_path))
 
 def test_sanatize_filenames():
     folders = get_folders('d:/movies')
