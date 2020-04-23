@@ -34,7 +34,7 @@ def stop_main(thread):
 def main_program(args):
     # thread = list()
     main_thread = MainThread('MainThread', base_path = args.path, verbose = args.verbose, dry_run=args.dryrun)
-    main_thread.setDaemon = True
+    main_thread.setDaemon = False
     main_thread.start()
     while check_main_thread(main_thread):
         try:
@@ -49,12 +49,14 @@ def main_program(args):
                 main_thread.dump_movies()
             if cmd[:2] == 'uf':
                 main_thread.update_folders()
-            if cmd[:3] == 'fix':
-                main_thread.fix_names()
+            if cmd[:7] == 'fixpath':
+                main_thread.fix_path_names()
+            if cmd[:7] == 'fixfile':
+                main_thread.fix_file_names()
         except KeyboardInterrupt:
             stop_main(main_thread)
         except Exception as e:
-            print(f'Exception {e}')
+            print(f'Exception in main_program {e}')
 
 def get_args():
     parser = argparse.ArgumentParser(description="moviething")

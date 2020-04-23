@@ -41,9 +41,15 @@ class MainThread(Thread):
     def populate_movies(self):
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)}')
+        # get new xml's
         self.update_xml_list()
+        # start fresh
+        self.movie_list = []
         for file in self.xml_list:
-            movie = MovieClass(get_xml_data(file))
+            # create movie list from data found in xml files
+            moviepath = os.path.dirname(file)
+            videofile = get_video_filelist(moviepath)
+            movie = MovieClass(get_xml_data(file), moviepath, videofile)            
             self.movie_list.append(movie)
             # print(movie)
         if self.verbose:
@@ -83,8 +89,13 @@ class MainThread(Thread):
         print('dumping movies')
         self.populate_movies()
         for movie in self.movie_list:
-            print(f"{movie.movie_data['movie']['id']}")
-
+            #print(f"{movie.movie_data['movie']['id']}")
+            try:
+                print(f'p: {movie.get_path()} t: {movie.get_title()} y: {movie.get_year()} imdb: {movie.get_imdb_id()}')
+            except TypeError as e:
+                print(f'dump_movies TypeError {movie.get_path()} {e}')
+            except Exception as e:
+                print(f'dump_movies other exception {movie.get_path()} {e}')
     def sanatize_filenames(self, input_folder=None):
         # remove [xxx] from all filenames
         # refresh movie_folder
@@ -109,66 +120,87 @@ class MainThread(Thread):
         # refresh again incase of renames...
         self.update_folders()
 
-    def fix_names(self):
-        # scan self.folder_list for valid xml, extract title and year, compare folder and filename, rename if needed
-        # todo possibly move this to MovieClass
-        if self.folder_list is None:
+    def fix_path_names(self, input_folder=None):
+        # for movie folder names only
+        # extract info from xml and rename paths and folder in self.folder_list or input_folder
+        # do nothing if no valid xml info was found
+        
+        if input_folder is None:
             self.update_folders()
-        # first iteration check and correct movie folder name
-        for movie_path in self.folder_list:
-            xml = get_xml(movie_path)
-            if xml is not None:
-                movie_title = get_xml_movie_title(xml)
-                self.xml_list.append(xml)
-                if movie_title is not None:
-                    
-                    if os.path.basename(os.path.dirname(xml)) == movie_title:
-                        pass
-                        # print(f'Movie folder name is correct {os.path.dirname(xml)}')
-                    else:
-                        if verbose:
-                            print(f'Movie folder name is incorrect {os.path.dirname(xml)}')
-                        if not self.dry_run:
-                            try:
-                                dest = self.base_path + '/' + movie_title
-                                os.rename(src=os.path.dirname(xml), dst=dest)
-                                print(f'Renamed {os.path.dirname(xml)} to {dest}')
-                            except Exception as e:
-                                print(f'fix_names rename failed {e}')
-        # second iteration check and rename movie filenames in self.folder_list
-        self.update_folders() # update if something was renamed in first iteration
-        for movie_path in self.folder_list:
-            # populate list of video files in each movie folder, files with valid video extension only from each subfolder
-            video_file = get_video_filelist(movie_path)
-            if video_file is not None:
-                vidname, ext = os.path.splitext(video_file)
-                # print(f'fix_names file {video_file} {movie_path} {e}')
-                # break
-            xml = get_xml(movie_path)
-            if xml is not None and video_file is not None:
-                movie_title = get_xml_movie_title(xml)
-                if movie_title is not None:
-                    correct_filename = movie_title + ext
-                    org_name = os.path.basename(video_file)
-                    if org_name == correct_filename:
-                        pass
-                    else:
-                        if self.verbose:
-                            print(f'Movie filename name is incorrect old: {org_name} correct: {correct_filename}')
-                        if not self.dry_run:
-                            try:
-                                dest = os.path.dirname(video_file) + '/' + correct_filename
-                                os.rename(src=video_file, dst=dest)
-                                print(f'Renamed {os.path.dirname(xml)} to {dest}')
-                            except Exception as e:
-                                print(f'fix_names rename failed {e}')
-
+            for movie_folder in self.folder_list:
+                fix_filenames_path(movie_folder, self.base_path, self.verbose, self.dry_run)
+        else:
+            fix_filenames_path(input_folder, self.base_path, self.verbose, self.dry_run)
     
+    def fix_file_names(self, input_folder=None):
+        # for video filenames only within movie folder
+        # extract info from xml and rename paths and folder in self.folder_list or input_folder
+        # do nothing if no valid xml info was found
+        
+        if input_folder is None:
+            self.update_folders
+            for movie_folder in self.folder_list:
+                fix_filenames_files(movie_folder, self.base_path, self.verbose, self.dry_run)
+        else:
+            fix_filenames_files(input_folder, self.base_path, self.verbose, self.dry_run)
+
     def clean_path(self, movie_path):
         # scan movie_path for unwanted files, move to junkignore subfolder if found
         if self.verbose:
             print(f'clean_path: {movie_path}')
 
 class MovieClass(object):
-    def __init__(self, movie_data):
+    def __init__(self, movie_data, moviepath, moviefile):
         self.movie_data = movie_data
+        self.moviepath = moviepath
+        self.moviefile = moviefile
+
+    def get_path(self):
+        # return str path to movie
+        return str(self.moviepath)
+
+    def get_videofile(self):
+        # return str full path of videofile
+        return str(self.moviefile.name)
+
+    def get_video(self):
+        # return direntry of movie
+        return self.moviefile
+
+    def get_title(self):
+        title = None
+        try:
+            title = self.movie_data.get('movie')['title'] or None
+            return title
+        except TypeError:
+            title = self.movie_data.get('movie')['OriginalTitle'] or None
+            return title
+        except Exception as e:
+            print(f'get_title err {self.moviepath}  {e}')
+            return None
+
+    def get_year(self):
+        year = None
+        try:
+            year = self.movie_data.get('movie')['year']
+            return year
+        except TypeError:
+            year = self.movie_data.get('movie')['ProductionYear']
+            return year
+        except Exception as e:
+            print(f'get_year {self.moviepath} err {e}')
+        
+    def get_imdb_id(self):
+        id = None
+        try:
+            id = self.movie_data.get('movie')['id']
+            return id
+        except TypeError:
+            id = self.movie_data.get('movie')['IMDbId']
+            return id
+        except TypeError as e:
+            print(f'get_imdb_id {self.moviepath}  typeerror ERR {e}')
+            return None
+        except Exception as e:
+            print(f'get_imdb_id {self.moviepath}  ERR {e}')
+            return None
