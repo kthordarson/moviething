@@ -5,6 +5,8 @@ from stringutils import sanatized_string
 import os
 import re
 import shutil
+
+
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     for entry in os.scandir(path):
@@ -40,10 +42,7 @@ def sanatize_filenames(filename, verbose=True, dry_run=True):
 def get_folders(base_path):
     folders = []
     try:
-        for d in os.scandir(base_path):
-            if os.path.isdir(d):
-                folders.append(d)
-                # print(f'{d} is folder')
+        folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
     except Exception as e:
         print(f'get_folders: {e}')
         exit(-1)
@@ -54,8 +53,7 @@ def get_video_filelist(movie_path, verbose=True, dry_run=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
     filelist = []
-    for file in scan_path(movie_path, vid_extensions, min_size=min_filesize):
-        filelist.append(file)
+    filelist = [file for file in scan_path(movie_path, vid_extensions, min_size=min_filesize)]
     if len(filelist) > 1:
         print(f'Mutiple vid files in {movie_path} skipping')
         return None
@@ -65,13 +63,6 @@ def get_video_filelist(movie_path, verbose=True, dry_run=True):
         if verbose:
             print(f'No videos in {movie_path}')
         return None
-
-# def get_video_filelist(movie_path):
-#     file_list = []
-#     for entry in scan_path(movie_path, vid_extensions, min_size=min_filesize):
-#         file_list.append(entry)
-#     return file_list
-
 
 def fix_filenames_path(movie_path, base_path, verbose, dry_run):
     # scan movie_path for valid xml, extract title and year, compare folder and filename, rename if needed
@@ -131,49 +122,6 @@ def fix_filenames_files(movie_path, base_path, verbose, dry_run):
                         except Exception as e:
                             print(f'fix_names rename failed {e}')
 
-def check_import_path(import_path, verbose=True, dry_run=True):
-    if verbose:
-        print(f'Checking path {import_path}')
-    if not os.path.exists(import_path):
-        if verbose:
-            print(f'Import path: {import_path} not found')
-        return False
-    else:
-        # scan all files in import_path
-        # - check for videos, nfo/xml, unwanted files, subtitles, etc
-        # - check if movie already exists in base_movies
-        if get_video_filelist(import_path) is None:
-            return False
-        else:
-            return True
-
-def import_movie(base_path, import_path, import_name, verbose, dry_run):
-    if verbose:
-        print(f'Starting import process: from {import_path} to {base_path}')
-    # make destination path
-    dest_path = base_path + '\\' + import_name
-#    try:
-#        os.makedirs(dest_path)
-#    except Exception as e:
-#        print(f'Could not create {dest_path} {e}')
-    # if dry, only copy from import
-    if dry_run:
-        try:
-            shutil.copytree(src=import_path, dst=dest_path)
-            # source_files = os.listdir(import_path)
-            # for source_file in source_files:
-            #    shutil.copyfile(src=source_file, dst=dest_path)
-            return True
-        except Exception as e:
-            print(f'Could not copy from {import_path} to {dest_path} {e}')
-            return False
-    else:
-        try:
-            shutil.move(src=import_path, dst=dest_path)
-            return True
-        except Exception as e:
-            print(f'Could not copy from {import_path} to {dest_path} {e}')
-            return False
 
 def test_sanatize_filenames():
     folders = get_folders('d:/movies')
@@ -182,6 +130,7 @@ def test_sanatize_filenames():
         if vidfile:
             # print(type(vidfile))
             sanatize_filenames(vidfile, verbose=True, dry_run=True)
+
 
 def test_fix_filenames():
     # xml1 = 'd:/movies/Reservoir Dogs (1992)/Reservoir Dogs (1992).xml'
@@ -196,4 +145,5 @@ def test_fix_filenames():
     fix_filenames_files(movie_path, base_path, verbose, dry_run)
 
 if __name__ == '__main__':
-    test_fix_filenames()
+    pass
+    # test_fix_filenames()

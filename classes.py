@@ -1,8 +1,9 @@
 # classes
 from threading import Thread
 import time
-from utils import import_movie, get_folders, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, fix_filenames_path, check_import_path
+from utils import get_folders, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, fix_filenames_path
 from nfoparser import get_xml_data, get_xml
+from importmovie import import_movie, import_check_path, import_process_path
 import os
 class MainThread(Thread):
     def __init__ (self, name, base_path='d:/movies', verbose=True, dry_run=True):
@@ -47,6 +48,7 @@ class MainThread(Thread):
                 print(f'Update folder_list from {self.base_path}')
         else:
             print(f'set_base_path {base_path} not found')
+
     def populate_movies(self):
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)}')
@@ -65,13 +67,15 @@ class MainThread(Thread):
             print(f'Found {len(self.movie_list)} movies ')
 
     def update_xml_list(self):
-        self.xml_list = []
+        # self.xml_list = []
         self.update_folders()
-        for movie_path in self.folder_list:
-            xml = get_xml(movie_path)
-            if xml is not None:
-                self.xml_list.append(xml)
-                # print(xml)
+        # for movie_path in self.folder_list:
+        #     xml = get_xml(movie_path)
+        #     if xml is not None:
+        #         self.xml_list.append(xml)
+        self.xml_list = [get_xml(movie_path) for movie_path in self.folder_list if get_xml(movie_path) is not None]
+        #         # print(xml)
+        # self.xml_list = [xml for get_xml(movie_path) in self.folder_list if xml is not None]
 
     def get_status(self):
         self.folder_list = get_folders(self.base_path)
@@ -166,7 +170,7 @@ class MainThread(Thread):
             print(f'clean_path: {movie_path}')
 
     def import_from_path(self, import_path):
-        if check_import_path(import_path):
+        if import_check_path(import_path):
             if self.verbose:
                 print(f'Importing from path: {import_path}')
             # todo fix : attemt to get base movie name from import_path
@@ -175,8 +179,10 @@ class MainThread(Thread):
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
             else:
-                if import_movie(self.base_path, import_path, import_name, self.verbose, self.dry_run):
-                    print(f'Import successful')
+                imported_movie_path = import_movie(self.base_path, import_path, import_name, self.verbose, self.dry_run)
+                if imported_movie_path is not None:
+                    print(f'Import successful to {imported_movie_path}')
+                    import_process_path(imported_movie_path, self.verbose, self.dry_run)
                 else:
                     print(f'Import error')
         else:
@@ -205,34 +211,41 @@ class MovieClass(object):
     def get_title(self):
         title = None
         try:
-            title = self.movie_data.get('movie')['title'] or None
+            title = self.movie_data['movie']['title']
             return title
-        except TypeError:
-            title = self.movie_data.get('movie')['OriginalTitle'] or None
+        except TypeError as e:
+            title = self.movie_data.get['movie']['OriginalTitle']
+            print(f'MovieClass: get_title typeerr {self.moviepath}  {e}')
             return title
         except Exception as e:
-            print(f'get_title err {self.moviepath}  {e}')
+            print(f'MovieClass: get_title err {self.moviepath}  {e}')
             return None
 
     def get_year(self):
         year = None
         try:
-            year = self.movie_data.get('movie')['year'] or None
+            year = self.movie_data['movie']['year']
             return year
-        except TypeError:
-            year = self.movie_data.get('movie')['ProductionYear'] or None
+        except TypeError as e:
+            year = self.movie_data['movie']['ProductionYear']
+            print(f'MovieClass: get_year typeerr {self.moviepath}  {e}')
             return year
         except Exception as e:
-            print(f'get_year {self.moviepath} err {e}')
+            print(f'MovieClass: get_year {self.moviepath} err {e}')
         
     def get_imdb_id(self):
         id = None
         try:
-            id = self.movie_data.get('movie')['id'] or None
+            #id = self.movie_data.get('movie')['id']
+            id = self.movie_data['movie']['IMDbId']
             return id
-        except TypeError:
-            id = self.movie_data.get('movie')['IMDbId'] or None
+        except TypeError as e:
+            id = self.movie_data['movie']['IMDbId']
+            print(f'MovieClass: get_imdb_id {self.moviepath} typeerr {e}')
             return id
         except Exception as e:
-            print(f'get_imdb_id {self.moviepath}  ERR {e}')
+            print(f'MovieClass: get_imdb_id {self.moviepath} exception {e}')
             return None
+
+if __name__ == '__main__':
+    pass

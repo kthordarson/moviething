@@ -2,13 +2,18 @@
 import string
 import re
 
-imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+# imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+imdb_regex = re.compile(r'(http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7}))')
+mediainfo_regex = re.compile(r'\[(\/)?mediainfo\]') #(r'\[(\/)?mediainfo\]')
+# regex_mi_2 = r'\[\/mediainfo\]'
 #imdb_regex = re.compile(r"http(?:s)?://(?:www\.)?imdb\.com/title/tt\d{7}")
 # imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
 valid_nfo_files = ('nfo', 'xml', 'txt')
 
 
 valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+valid_tag_chars = "-_.() :/%s%s" % (string.ascii_letters, string.digits)
+valid_xml_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
 char_limit = 255
 
 mediainfo_tags = [
@@ -22,6 +27,8 @@ mediainfo_tags = [
     'format', 'id','format','format/info','format profile','format settings, cabac','format settings, reframes','codec id',
     'codec id/info','duration','bit rate','width','height','display aspect ratio','frame rate mode','frame rate','color space',
     'chroma subsampling','bit depth','scan type','bits/(pixel*frame)','stream size','writing library','encoded date','tagged date',
+    'sample included', 'source', 'container', 'length', 'size', 'total bitrate', 'imdb information', 'genre', 'codec', 'type',
+    'link', 'imdb link', 'imdb score', 'link', 'download', 'filename', 'md5'
     ]
 vid_extensions = (
     'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv', 'webm', 'ogg'
@@ -43,3 +50,6 @@ unwanted_files = dict(
     videos=("rarbg.com.mp4", "sample")
 )
 
+
+if __name__ == '__main__':
+    pass
