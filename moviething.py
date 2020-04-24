@@ -9,7 +9,7 @@ scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  '''
 import argparse
-from classes import *
+from classes import MainThread, MovieClass
 
 def check_main_thread(thread):
     return thread.isAlive()
@@ -38,12 +38,16 @@ def main_program(args):
                 main_thread.dump_movies()
             if cmd[:2] == 'uf':
                 main_thread.update_folders()
+            if cmd[:6] == 'update':
+                main_thread.update()
             if cmd[:7] == 'fixpath':
                 main_thread.fix_path_names()
             if cmd[:7] == 'fixfile':
                 main_thread.fix_file_names()
             if cmd[:6] == 'import':
                 main_thread.import_from_path(cmd[7:])
+            if cmd[:7] == 'setbase':
+                main_thread.set_base_path(cmd[8:])
         except KeyboardInterrupt:
             stop_main(main_thread)
         except Exception as e:
@@ -79,7 +83,6 @@ def get_args():
     return parser.parse_args()
 
 if __name__ == '__main__':
-    t1 = time.time()
     args = get_args()
     verbose = args.verbose
     dry_run = args.dryrun

@@ -1,9 +1,10 @@
 # misc functions
 from nfoparser import get_xml_movie_title, get_xml
-from defs import *
+from defs import vid_extensions, min_filesize
 from stringutils import sanatized_string
 import os
-
+import re
+import shutil
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     for entry in os.scandir(path):
@@ -49,7 +50,7 @@ def get_folders(base_path):
     return folders
 
 
-def get_video_filelist(movie_path, verbpse=True, dry_run=True):
+def get_video_filelist(movie_path, verbose=True, dry_run=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
     filelist = []
@@ -85,7 +86,7 @@ def fix_filenames_path(movie_path, base_path, verbose, dry_run):
         if movie_title is not None:            
             if os.path.basename(os.path.dirname(xml)) == movie_title:
                 # pass
-                print(f'Movie folder name is correct {os.path.dirname(xml)}')
+                # print(f'Movie folder name is correct {os.path.dirname(xml)}')
                 return movie_path
             else:
                 dest = base_path + '/' + movie_title
@@ -113,11 +114,12 @@ def fix_filenames_files(movie_path, base_path, verbose, dry_run):
         if movie_title is not None:            
             video_file = get_video_filelist(movie_path)
             if video_file is not None:
-                vidname, ext = os.path.splitext(video_file)
+                ext = os.path.splitext(video_file)[1]
                 correct_filename = movie_title + ext
                 org_name = os.path.basename(video_file)
                 if org_name == correct_filename and verbose:
-                    print(f'Video filename correct: org={org_name} cor={correct_filename}')
+                    pass
+                    # print(f'Video filename correct: org={org_name} cor={correct_filename}')
                 else:
                     dest = os.path.dirname(video_file) + '/' + correct_filename
                     if verbose:
@@ -137,7 +139,41 @@ def check_import_path(import_path, verbose=True, dry_run=True):
             print(f'Import path: {import_path} not found')
         return False
     else:
-        print(get_video_filelist(import_path))
+        # scan all files in import_path
+        # - check for videos, nfo/xml, unwanted files, subtitles, etc
+        # - check if movie already exists in base_movies
+        if get_video_filelist(import_path) is None:
+            return False
+        else:
+            return True
+
+def import_movie(base_path, import_path, import_name, verbose, dry_run):
+    if verbose:
+        print(f'Starting import process: from {import_path} to {base_path}')
+    # make destination path
+    dest_path = base_path + '\\' + import_name
+#    try:
+#        os.makedirs(dest_path)
+#    except Exception as e:
+#        print(f'Could not create {dest_path} {e}')
+    # if dry, only copy from import
+    if dry_run:
+        try:
+            shutil.copytree(src=import_path, dst=dest_path)
+            # source_files = os.listdir(import_path)
+            # for source_file in source_files:
+            #    shutil.copyfile(src=source_file, dst=dest_path)
+            return True
+        except Exception as e:
+            print(f'Could not copy from {import_path} to {dest_path} {e}')
+            return False
+    else:
+        try:
+            shutil.move(src=import_path, dst=dest_path)
+            return True
+        except Exception as e:
+            print(f'Could not copy from {import_path} to {dest_path} {e}')
+            return False
 
 def test_sanatize_filenames():
     folders = get_folders('d:/movies')

@@ -1,8 +1,9 @@
 # classes
 from threading import Thread
 import time
-from utils import *
-from nfoparser import *
+from utils import import_movie, get_folders, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, fix_filenames_path, check_import_path
+from nfoparser import get_xml_data, get_xml
+import os
 class MainThread(Thread):
     def __init__ (self, name, base_path='d:/movies', verbose=True, dry_run=True):
         Thread.__init__(self)
@@ -36,6 +37,16 @@ class MainThread(Thread):
         self.kill = True
         super().join()
 
+    def set_base_path(self, base_path):
+        if os.path.exists(base_path):
+            self.base_path = base_path
+            if self.verbose:
+                print(f'Set base_path to {self.base_path}')
+            self.folder_list = get_folders(self.base_path)
+            if self.verbose:
+                print(f'Update folder_list from {self.base_path}')
+        else:
+            print(f'set_base_path {base_path} not found')
     def populate_movies(self):
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)}')
@@ -66,12 +77,19 @@ class MainThread(Thread):
         self.folder_list = get_folders(self.base_path)
         if self.folder_list is not None:
             fsize = len(self.folder_list) or None
-        print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run} f:{fsize}')
+        print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run} f:{fsize} bp:{self.base_path}')
+
+    def update(self):
+        # full refresh
+        self.update_folders()
+        self.populate_movies()
 
     def update_folders(self):
         # scan base folder for movie folders
         if self.folder_list is not None:
             fsize = len(self.folder_list)
+        else:
+            fsize = 0
         self.folder_list = get_folders(self.base_path)
         if self.verbose:
             print(f'Update_folders {fsize} {len(self.folder_list)}')
@@ -80,7 +98,7 @@ class MainThread(Thread):
         # dumo our list of movie folders
         if self.folder_list:
             for f in self.folder_list:
-                print(f'{f}')
+                print(f'{f.path}')
     
     def dump_movies(self):
         # dump movie list
@@ -148,9 +166,23 @@ class MainThread(Thread):
             print(f'clean_path: {movie_path}')
 
     def import_from_path(self, import_path):
-        if self.verbose:
-            print(f'Importing from path: {import_path}')
-        check_import_path(import_path)
+        if check_import_path(import_path):
+            if self.verbose:
+                print(f'Importing from path: {import_path}')
+            # todo fix : attemt to get base movie name from import_path
+            import_name = os.path.dirname(import_path).split('\\')[-1]
+            if os.path.exists(self.base_path + '\\' + import_name):
+                if self.verbose:
+                    print(f'{import_name} already exists, not importing.')
+            else:
+                if import_movie(self.base_path, import_path, import_name, self.verbose, self.dry_run):
+                    print(f'Import successful')
+                else:
+                    print(f'Import error')
+        else:
+            if self.verbose:
+                print(f'Nothing to import from path: {import_path}')
+                
 
 class MovieClass(object):
     def __init__(self, movie_data, moviepath, moviefile):
