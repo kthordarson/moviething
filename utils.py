@@ -16,19 +16,25 @@ def scan_path(path, extensions, min_size=0):
             if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
                 yield entry
 
+
 def sanatize_foldernames(movie_folder, verbose, dry_run):
     # remove [] from folder names
     folder_base = os.path.basename(movie_folder)
-    
     bracket_regex = re.compile(r'/[(.*?)/]')
     clean_name = sanatized_string(re.sub(bracket_regex, '', folder_base).strip())
     if folder_base != clean_name:
         # print(f'sanatize_foldernames:{folder_base}')
         # print(f'Clean name        :{clean_name}')
         new_name = os.path.dirname(movie_folder.path) + '/' + clean_name
-        print(f'Renaming {movie_folder.path} to {new_name}')
+        if verbose:
+            print(f'sanatize_foldernames: {movie_folder} {folder_base} {clean_name} {verbose} {dry_run}')
+            print(f'Renaming {movie_folder.path} to {new_name}')
         if not dry_run:
-            os.rename(src=movie_folder.path, dst=new_name)
+            try:
+                os.rename(src=movie_folder.path, dst=new_name)
+            except Exception as e:
+                print(f'sanatize_foldername ERROR {movie_folder.path} to {new_name} {e}')
+
 
 def sanatize_filenames(filename, verbose=True, dry_run=True):
     # remove [] from filenames within each movie folder
@@ -38,6 +44,9 @@ def sanatize_filenames(filename, verbose=True, dry_run=True):
     if base_filename != clean_name:
         print(f'old filename      :{base_filename}')
         print(f'Clean name        :{clean_name}')
+    if verbose:
+        print(f'sanatize_filenames: {filename} {base_filename} {clean_name} {verbose} {dry_run}')
+
 
 def get_folders(base_path):
     folders = []
@@ -64,6 +73,7 @@ def get_video_filelist(movie_path, verbose=True, dry_run=True):
             print(f'No videos in {movie_path}')
         return None
 
+
 def fix_filenames_path(movie_path, base_path, verbose, dry_run):
     # scan movie_path for valid xml, extract title and year, compare folder and filename, rename if needed
     # first iteration check and correct movie folder name
@@ -74,7 +84,7 @@ def fix_filenames_path(movie_path, base_path, verbose, dry_run):
     else:
         movie_title = get_xml_movie_title(xml)
         # xml_list.append(xml)
-        if movie_title is not None:            
+        if movie_title is not None:
             if os.path.basename(os.path.dirname(xml)) == movie_title:
                 # pass
                 # print(f'Movie folder name is correct {os.path.dirname(xml)}')
@@ -85,13 +95,14 @@ def fix_filenames_path(movie_path, base_path, verbose, dry_run):
                     print(f'Movie folder name is incorrect {os.path.dirname(xml)}')
                     print(f'Renaming from: {os.path.dirname(xml)}')
                     print(f'Renaming to  : {dest}')
-                if not dry_run:                    
-                    try:                        
+                if not dry_run:
+                    try:
                         os.rename(src=os.path.dirname(xml), dst=dest)
                     except Exception as e:
                         print(f'fix_names rename failed {e}')
                 # return renamed folder name
                 return dest
+
 
 def fix_filenames_files(movie_path, base_path, verbose, dry_run):
     # second iteration check and rename movie filenames in movie_path / dest
@@ -102,7 +113,7 @@ def fix_filenames_files(movie_path, base_path, verbose, dry_run):
     else:
         movie_title = get_xml_movie_title(xml)
         # xml_list.append(xml)
-        if movie_title is not None:            
+        if movie_title is not None:
             video_file = get_video_filelist(movie_path)
             if video_file is not None:
                 ext = os.path.splitext(video_file)[1]
@@ -117,8 +128,8 @@ def fix_filenames_files(movie_path, base_path, verbose, dry_run):
                         print(f'Movie filename name is incorrect old: {org_name} correct: {correct_filename}')
                         print(f'Renamed {video_file.path} to {dest}')
                     if not dry_run:
-                        try:                        
-                            os.rename(src=video_file, dst=dest)                        
+                        try:
+                            os.rename(src=video_file, dst=dest)
                         except Exception as e:
                             print(f'fix_names rename failed {e}')
 
@@ -143,6 +154,7 @@ def test_fix_filenames():
     # input_folder = xml1
     fix_filenames_path(movie_path, base_path, verbose, dry_run)
     fix_filenames_files(movie_path, base_path, verbose, dry_run)
+
 
 if __name__ == '__main__':
     pass

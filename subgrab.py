@@ -52,10 +52,8 @@ def write_srt(data, file):
 
 
 def thesubdb_grabber():
-    files = []
-    files.append(
-        "d:/movies/Terminator.(1984).H264.Ita.Eng.Ac3.5.1.sub.ita.eng.[BaMax71].mkv")
-    files.append("d:/movies/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena.mp4")
+    files = ["d:/movies/Terminator.(1984).H264.Ita.Eng.Ac3.5.1.sub.ita.eng.[BaMax71].mkv",
+             "d:/movies/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena.mp4"]
     for file in files:
         film_hash = get_hash(name=file)
         if request_subtitile(film_hash):

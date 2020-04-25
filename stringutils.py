@@ -1,6 +1,7 @@
 from defs import valid_input_string_chars, char_limit, valid_tag_chars
 import unicodedata
 
+
 def sanatized_string(input_string, whitelist=valid_input_string_chars, replace='', format='NFKD'):
     # replace spaces
     #  ‘NFC’, ‘NFKC’, ‘NFD’, and ‘NFKD’.

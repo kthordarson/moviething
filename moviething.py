@@ -1,5 +1,5 @@
 # moviething
-''' 
+"""
 rename files to match movie title
 check subtitles, dl missing
 gather information about video codec / quality
@@ -7,9 +7,10 @@ delete samples files and other extra files
 extract movie info from nfo/xml files
 scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
- '''
+ """
 import argparse
-from classes import MainThread, MovieClass
+from classes import MainThread  #  , MovieClass
+
 
 def check_main_thread(thread):
     return thread.isAlive()
@@ -22,7 +23,7 @@ def stop_main(thread):
 
 def main_program(args):
     # thread = list()
-    main_thread = MainThread('MainThread', base_path = args.path, verbose = args.verbose, dry_run=args.dryrun)
+    main_thread = MainThread('MainThread', base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
     main_thread.setDaemon = False
     main_thread.start()
     while check_main_thread(main_thread):
@@ -53,10 +54,11 @@ def main_program(args):
         except Exception as e:
             print(f'Exception in main_program {e}')
 
+
 def get_args():
     parser = argparse.ArgumentParser(description="moviething")
     parser.add_argument("--path", nargs="?", default="d:/movies",
-                        help="Base movie folder", required=True, action="store",)
+                        help="Base movie folder", required=True, action="store", )
     parser.add_argument("--import_path", action="store",
                         help="Import movie files from folder and move them to Base movie folder")
     parser.add_argument("--dryrun", action="store_true",
@@ -73,14 +75,15 @@ def get_args():
     else:
         print(f'Dry run: {args.dryrun}')
         # dry_run = True
-#    else:
-#        print(f'Dry run: {args.dryrun}')
-        # dry_run = False
+    #    else:
+    #        print(f'Dry run: {args.dryrun}')
+    # dry_run = False
     # if args.verbose:
     #     verbose = True
     # else:
     #     verbose = False
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = get_args()
