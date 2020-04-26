@@ -19,6 +19,22 @@ def has_handle(fpath):
             pass
     return False
 
+def can_open_file(file):
+    # check if we can get handle
+    print(f'can_open_file: {file.path}')
+    try:
+        file_object = open(file.path, 'a', 8)
+        if file_object:
+            return True
+        else:
+            return False
+    except IOError as e:
+        print(f'scan_path: IOERROR {e} on {file.path}')
+        return False
+    except Exception as e:
+        print(f'scan_path: EXCEPTION {e} on {file.path}')
+        return False
+    
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     for entry in os.scandir(path):
@@ -26,14 +42,17 @@ def scan_path(path, extensions, min_size=0):
             yield from scan_path(entry.path, extensions, min_size)
         else:
             if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
-                try:
-                    file_object = open(entry.path, 'a', 8)
-                    if file_object:
-                        yield entry
-                except IOError as e:
-                    print(f'scan_path: IOERROR {e} on {entry.name}')
-                except Exception as e:
-                    print(f'scan_path: EXCEPTION {e} on {entry.name}')
+                yield entry
+
+def scan_path_open(path, extensions, min_size=0):
+    # scan given path for movies with valid extensions and larger than min_size
+    # print(f'scanpathopen....')
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            yield from scan_path_open(entry.path, extensions, min_size)
+        else:
+            if entry.name.endswith(extensions) and entry.stat().st_size > min_size and can_open_file(entry):
+                yield entry
 
 def sanatize_foldernames(movie_folder, verbose, dry_run):
     # remove [] from folder names
@@ -84,7 +103,8 @@ def get_folders_non_empty(base_path):
         for path in folders:
             root_directory = Path(path)
             # file_object = open(f, 'a', 8)
-            if len([file for file in scan_path(path, vid_extensions, min_size=min_filesize)]) >= 1:
+            if len([file for file in scan_path_open(path, vid_extensions, min_size=min_filesize)]) >= 1:
+                # print(f'get_folders_non_empty: {file}')
                 result.append(PurePath(root_directory))
 #            if sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) > 1:
 #                result.append(PurePath(root_directory))
