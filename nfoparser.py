@@ -56,10 +56,10 @@ def get_xml_data(file):
     # read xml data from file, convert to dict and return dict with parsed movie info
     # xml_data = None
     try:
-        tree = et.parse(file)
-        root = tree.getroot()
-        xml_data = etree_to_dict(root)
-        return xml_data
+#        tree = et.parse(file)
+#        root = tree.getroot()
+#        xml_data = etree_to_dict(root)
+        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get('Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None

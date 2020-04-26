@@ -9,30 +9,47 @@ scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  """
 import argparse
-from classes import MainThread  #  , MovieClass
+from classes import MainThread, Monitor  #  , MovieClass
 
 
 def check_main_thread(thread):
     return thread.isAlive()
 
 
+def check_threads(threads):
+    return True in [t.isAlive() for t in threads]
+
+def stop_all_threads(threads):
+    for t in threads:
+        t.kill = True
+        t.join()
+
 def stop_main(thread):
+    thread.kill = True
     thread.join()
     exit(0)
 
 
 def main_program(args):
-    # thread = list()
+    threads = list()
     main_thread = MainThread('MainThread', base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
-    main_thread.setDaemon = False
-    main_thread.start()
-    while check_main_thread(main_thread):
+    threads.append(main_thread)
+    monitor_thread = Monitor('Monitor', monitor_path='o:/movies/incoming', verbose=args.verbose, dry_run=args.dryrun)
+    threads.append(monitor_thread)
+    for t in threads:
+        t.setDaemon = False
+        t.start()
+#    main_thread.setDaemon = False
+#    main_thread.start()
+#    monitor_thread.setDaemon = False
+#    monitor_thread.start()
+    while check_threads(threads):
         try:
             cmd = input('>')
             if cmd[:1] == 'i':
                 main_thread.get_status()
             if cmd[:4] == 'quit' or cmd[:1] == 'q':
-                stop_main(main_thread)
+                stop_all_threads(threads)
             if cmd[:4] == 'dump':
                 main_thread.dump_folders()
             if cmd[:6] == 'movies':
@@ -50,7 +67,7 @@ def main_program(args):
             if cmd[:7] == 'setbase':
                 main_thread.set_base_path(cmd[8:])
         except KeyboardInterrupt:
-            stop_main(main_thread)
+            stop_all_threads(threads)
         except Exception as e:
             print(f'Exception in main_program {e}')
 

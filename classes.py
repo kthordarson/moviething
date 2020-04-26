@@ -106,9 +106,9 @@ class MainThread(Thread):
             try:
                 print(f'p: {movie.get_path()} t: {movie.get_title()} y: {movie.get_year()} imdb: {movie.get_imdb_id()}')
             except TypeError as e:
-                print(f'dump_movies TypeError {movie.get_path()} {e}')
+                print(f'dump_movies TypeError {movie.moviepath} {e}')
             except Exception as e:
-                print(f'dump_movies other exception {movie.get_path()} {e}')
+                print(f'dump_movies other exception {movie.moviepath} {e}')
 
     def sanatize_filenames(self, input_folder=None):
         # remove [xxx] from all filenames
@@ -186,6 +186,30 @@ class MainThread(Thread):
             if self.verbose:
                 print(f'Nothing to import from path: {import_path}')
 
+class Monitor(Thread):
+    def __init__(self, name, monitor_path='o:/movies/incoming', verbose=True, dry_run=True):
+        Thread.__init__(self)
+        self.name = name
+        self.verbose = verbose
+        self.dry_run = dry_run
+        self.monitor_path = monitor_path
+        self.kill = False
+
+    def run(self):
+        if self.verbose:
+            print(f'monitor: monitoring folder {self.monitor_path}')
+        while True:
+            self.folders = get_folders(self.monitor_path)
+            if self.kill:
+                return
+            if self.verbose:
+                # pass
+                print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
+            time.sleep(1)
+
+    def join(self, **kwargs):
+        self.kill = True
+        super().join()
 
 class MovieClass(object):
     def __init__(self, movie_data, movie_path):
@@ -206,43 +230,16 @@ class MovieClass(object):
         return self.moviefile
 
     def get_title(self):
-        # title = None
-        try:
-            title = self.movie_data['movie']['title']
-            return title
-        except TypeError:  # as e:
-            title = self.movie_data.get['movie']['OriginalTitle']
-            # print(f'MovieClass: get_title typeerr {self.moviepath}  {e}')
-            return title
-        except Exception:  # as e:
-            # print(f'MovieClass: get_title err {self.moviepath}  {e}')
-            return None
+        return self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or None
 
     def get_year(self):
-        # year = None
-        try:
-            year = self.movie_data['movie']['year']
-            return year
-        except TypeError:  # as e:
-            year = self.movie_data['movie']['ProductionYear']
-            # print(f'MovieClass: get_year typeerr {self.moviepath}  {e}')
-            return year
-        except Exception:  # as e:
-            return None
-            # print(f'MovieClass: get_year {self.moviepath} err {e}')
+        return self.movie_data.get('year') or self.movie_data.get('ProductionYear') or None
 
     def get_imdb_id(self):
-        # id = None
-        try:
-            # id = self.movie_data.get('movie')['id']
-            return self.movie_data['movie']['IMDbId']
-        except TypeError:  # as e:
-            # id = self.movie_data['movie']['IMDbId']
-            # print(f'MovieClass: get_imdb_id {self.moviepath} typeerr {e}')
-            return self.movie_data['movie']['IMDbId']
-        except Exception:  # as e:
-            # print(f'MovieClass: get_imdb_id {self.moviepath} exception {e}')
-            return None
+        if type(self.movie_data.get('id')) == list:
+            return self.movie_data.get('id')[0]
+        else:
+            return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
 
 
 if __name__ == '__main__':
