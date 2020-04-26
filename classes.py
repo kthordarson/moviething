@@ -1,18 +1,21 @@
 # classes
 from threading import Thread
+from queue import Queue, Empty
 import time
-from utils import get_folders, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, \
+from utils import get_folders, get_folders_non_empty, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, \
     fix_filenames_path
 from nfoparser import get_xml_data, get_xml
 from importmovie import import_movie, import_check_path, import_process_path
 import os
-
+import shutil
+from shutil import Error
 
 class MainThread(Thread):
     # noinspection PySameParameterValue
-    def __init__(self, name, base_path='d:/movies', verbose=True, dry_run=True):
+    def __init__(self, name, monitor_q=Queue(), base_path='',  verbose=True, dry_run=True):
         Thread.__init__(self)
         self.name = name
+        self.monitor_q = monitor_q
         self.verbose = verbose
         self.dry_run = dry_run
         self.base_path = base_path
@@ -31,6 +34,14 @@ class MainThread(Thread):
         if self.folder_list is not None:
             self.populate_movies()
         while True:
+            try:
+                new_movie = self.monitor_q.get_nowait()
+                print(f'new_movie found: {new_movie}')
+                self.import_from_path(new_movie)
+                # self.grab_folder(new_movie)
+                self.monitor_q.task_done()
+            except Empty:
+                pass
             if self.kill:
                 return
             if self.verbose:
@@ -41,6 +52,18 @@ class MainThread(Thread):
     def join(self, **kwargs):
         self.kill = True
         super().join()
+
+    def grab_folder(self, item):
+        print(f'q_process: {item}')
+        try:
+            # os.rename(src=i.path, dst='d:/moviestest')
+            shutil.move(src=str(item), dst=self.base_path)
+            # self.import_from_path(item):
+        except Error as e:
+            print(f'grab_folder: {e}')
+        except Exception as e:
+            print(f'grab_folder: EXCEPTION {e}')
+            # exit(-1)
 
     def set_base_path(self, base_path):
         if os.path.exists(base_path):
@@ -171,7 +194,7 @@ class MainThread(Thread):
             if self.verbose:
                 print(f'Importing from path: {import_path}')
             # todo fix : attemt to get base movie name from import_path
-            import_name = os.path.dirname(import_path).split('\\')[-1]
+            import_name = import_path.parts[-1] # os.path.dirname(import_path).split('\\')[-1]
             if os.path.exists(self.base_path + '\\' + import_name):
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
@@ -187,24 +210,40 @@ class MainThread(Thread):
                 print(f'Nothing to import from path: {import_path}')
 
 class Monitor(Thread):
-    def __init__(self, name, monitor_path='o:/movies/incoming', verbose=True, dry_run=True):
+    def __init__(self, name, monitor_q=Queue(), monitor_path='', base_path='', verbose=True, dry_run=True):
         Thread.__init__(self)
         self.name = name
+        self.monitor_q = monitor_q
         self.verbose = verbose
         self.dry_run = dry_run
         self.monitor_path = monitor_path
+        self.base_path = base_path
         self.kill = False
 
     def run(self):
         if self.verbose:
-            print(f'monitor: monitoring folder {self.monitor_path}')
+            print(f'monitor: monitoring folder {self.monitor_path} destination base:{self.base_path}')
         while True:
-            self.folders = get_folders(self.monitor_path)
+            self.folders = get_folders_non_empty(self.monitor_path)
+#            if len(self.folders) >= 1:
+            for f in self.folders:
+                dest_name = os.path.join(self.base_path, f.parts[-1]) # self.base_path + '/' + os.path.basename(f.path)
+                # print(f'monitor: dest: {dest_name}')
+                # print(f'monitor: base: {self.base_path}')
+                if not os.path.exists(dest_name):
+                    # todo file_object = open(entry.path, 'a', 8)
+                    # todo check if we can move files before putting into q
+                    print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
+                    self.monitor_q.put(f)
+                else:
+                    print(f'monitor: {dest_name} exists')
+                        
             if self.kill:
                 return
             if self.verbose:
-                # pass
-                print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
+                #pass
+                if not self.monitor_q.empty():
+                    print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
             time.sleep(1)
 
     def join(self, **kwargs):

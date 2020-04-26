@@ -9,6 +9,7 @@ scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  """
 import argparse
+from queue import Queue
 from classes import MainThread, Monitor  #  , MovieClass
 
 
@@ -32,10 +33,12 @@ def stop_main(thread):
 
 def main_program(args):
     threads = list()
-    main_thread = MainThread('MainThread', base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
+    monitor_q = Queue()
+    main_thread = MainThread('MainThread', monitor_q, base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
     threads.append(main_thread)
-    monitor_thread = Monitor('Monitor', monitor_path='o:/movies/incoming', verbose=args.verbose, dry_run=args.dryrun)
-    threads.append(monitor_thread)
+    if args.monitor_path is not None:
+        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=args.monitor_path, base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
+        threads.append(monitor_thread)
     for t in threads:
         t.setDaemon = False
         t.start()
@@ -78,6 +81,8 @@ def get_args():
                         help="Base movie folder", required=True, action="store", )
     parser.add_argument("--import_path", action="store",
                         help="Import movie files from folder and move them to Base movie folder")
+    parser.add_argument("--monitor_path", action="store", default=None,
+                        help="Watch this folder for new incoming movies")
     parser.add_argument("--dryrun", action="store_true",
                         help="Dry run - no changes to filesystem")
     parser.add_argument("--verbose", action="store_true",

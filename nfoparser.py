@@ -18,7 +18,7 @@ from xml.dom import minidom
 from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
 # from stringutils import sanatized_string
 from stringutils import sanatized_string
-
+from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
 
 # from classes import *
 
@@ -124,10 +124,27 @@ def get_xml(movie_path):
         return None
     if len(xml) == 0:
         return None
-    if len(xml) > 1:
-        print(f'Multiple xml found in {input_movie_path}')
-    else:
+    elif len(xml) == 1:
         return xml[0]
+    else:
+        print(f'Multiple xml found in {input_movie_path}')
+        newxml = combine_xml(xml)
+        result = et.ElementTree(element=newxml.getroot())
+        result_filename = os.path.join(movie_path, PurePath(input_movie_path).parts[-1] + '.xml')
+        for f in xml:
+            try:
+                os.rename(src=f, dst=f + '.olddata')
+            except Exception as e:
+                print(f'get_xml ERR {e} while renaming old xml')
+                return None
+        # print(type(result))
+        # resultroot = result.getroot()
+        try:
+            result.write(result_filename)
+            return result_filename
+        except Exception as e:
+            print(f'get_xml ERR {e} while saving new combined xml')
+            return None
 
 
 def combine_xml(files):

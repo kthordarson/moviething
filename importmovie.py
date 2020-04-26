@@ -48,7 +48,7 @@ def import_movie(base_path, import_path, import_name, verbose, dry_run):
             shutil.move(src=import_path, dst=dest_path)
             return dest_path
         except Exception as e:
-            print(f'Could not copy from {import_path} to {dest_path} {e}')
+            print(f'Could not move from {import_path} to {dest_path} {e}')
             return None
 
 def import_process_path(base_path, movie_path, verbose, dry_run):

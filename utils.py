@@ -5,7 +5,19 @@ from stringutils import sanatized_string
 import os
 import re
 import shutil
+from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
 
+import psutil
+
+def has_handle(fpath):
+    for proc in psutil.process_iter():
+        try:
+            for item in proc.open_files():
+                if fpath == item.path:
+                    return True
+        except Exception:
+            pass
+    return False
 
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
@@ -14,8 +26,14 @@ def scan_path(path, extensions, min_size=0):
             yield from scan_path(entry.path, extensions, min_size)
         else:
             if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
-                yield entry
-
+                try:
+                    file_object = open(entry.path, 'a', 8)
+                    if file_object:
+                        yield entry
+                except IOError as e:
+                    print(f'scan_path: IOERROR {e} on {entry.name}')
+                except Exception as e:
+                    print(f'scan_path: EXCEPTION {e} on {entry.name}')
 
 def sanatize_foldernames(movie_folder, verbose, dry_run):
     # remove [] from folder names
@@ -49,13 +67,32 @@ def sanatize_filenames(filename, verbose=True, dry_run=True):
 
 
 def get_folders(base_path):
-    folders = []
+    # folders = []
     try:
-        folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
+        return [d for d in os.scandir(base_path) if os.path.isdir(d)]
     except Exception as e:
         print(f'get_folders: {e}')
-        exit(-1)
-    return folders
+        # exit(-1)
+        return None
+
+
+def get_folders_non_empty(base_path):
+    try:
+        # sum(os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f))
+        folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
+        result = []
+        for path in folders:
+            root_directory = Path(path)
+            # file_object = open(f, 'a', 8)
+            if len([file for file in scan_path(path, vid_extensions, min_size=min_filesize)]) >= 1:
+                result.append(PurePath(root_directory))
+#            if sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) > 1:
+#                result.append(PurePath(root_directory))
+    except Exception as e:
+        print(f'get_folders: {e}')
+        return []
+        # exit(-1)
+    return result
 
 
 def get_video_filelist(movie_path, verbose=True, dry_run=True):
