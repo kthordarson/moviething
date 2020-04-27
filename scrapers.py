@@ -1,6 +1,7 @@
 # imdb scraper
 from lxml import html
 from lxml import etree as et
+# noinspection PyUnresolvedReferences
 from xml.dom import minidom
 from io import StringIO, BytesIO
 from bs4 import BeautifulSoup

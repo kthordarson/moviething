@@ -21,10 +21,13 @@ from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, v
 from stringutils import sanatized_string
 from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
 
+
 # from classes import *
 
+# noinspection PyUnusedFunction
 def who_called_func():
     return inspect.stack()[2][3]
+
 
 def etree_get_dchildren(children):
     dd = defaultdict(list)
@@ -59,16 +62,17 @@ def get_xml_data(file):
     # read xml data from file, convert to dict and return dict with parsed movie info
     # xml_data = None
     try:
-#        tree = et.parse(file)
-#        root = tree.getroot()
-#        xml_data = etree_to_dict(root)
-        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get('Title')  or None
+        #        tree = et.parse(file)
+        #        root = tree.getroot()
+        #        xml_data = etree_to_dict(root)
+        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get(
+            'Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
 
+
 def get_xml_score(file):
-    
     # print(type(file))
     valid_score = 0
     if type(file) == str:
@@ -79,7 +83,7 @@ def get_xml_score(file):
         data = et.parse(xml_file).getroot()
         # tag_list = [tag.tag for tag in data]
         valid_score += len([k.text for k in data.findall('id')])
-        valid_score += len([k.text for k in data.findall('IMDBiD')]) # IMDbId
+        valid_score += len([k.text for k in data.findall('IMDBiD')])  # IMDbId
         valid_score += len([k.text for k in data.findall('IMDbId')])
         valid_score += len([k.text for k in data.findall('title')])
         valid_score += len([k.text for k in data.findall('Title')])
@@ -89,7 +93,7 @@ def get_xml_score(file):
     except Exception as e:
         print(f'get_xml_score: Invalid XML {xml_file} {e}')
         return 0
-    
+
 
 def is_valid_xml(file):
     # print(type(file))
@@ -295,6 +299,7 @@ def test_nfo_pp(movie_path):
     return results
 
 
+# noinspection PySameParameterValue
 def test_nfo_tt(movie_path):
     # fastest method !!!!
     nfolist = get_nfo_list(movie_path)

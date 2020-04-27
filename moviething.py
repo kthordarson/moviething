@@ -10,42 +10,48 @@ in case of multiple nfo/xml merge into one
  """
 import argparse
 from queue import Queue
-from classes import MainThread, Monitor  #  , MovieClass
+from classes import MainThread, Monitor  # , MovieClass
 
 
-def check_main_thread(thread):
-    return thread.isAlive()
+# def check_main_thread(thread):
+#    return thread.isAlive()
 
 
 def check_threads(threads):
     return True in [t.isAlive() for t in threads]
+
 
 def stop_all_threads(threads):
     for t in threads:
         t.kill = True
         t.join()
 
-def stop_main(thread):
-    thread.kill = True
-    thread.join()
-    exit(0)
+
+# def stop_main(thread):
+#    thread.kill = True
+#    thread.join()
+#    exit(0)
 
 
-def main_program(args):
+def main_program():
+    args = get_args()
+    # verbose = args.verbose
+    # dry_run = args.dryrun
     threads = list()
     monitor_q = Queue()
     main_thread = MainThread('MainThread', monitor_q, base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
     threads.append(main_thread)
     if args.monitor_path is not None:
-        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=args.monitor_path, base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
+        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=args.monitor_path, base_path=args.path,
+                                 verbose=args.verbose, dry_run=args.dryrun)
         threads.append(monitor_thread)
     for t in threads:
         t.setDaemon = False
         t.start()
-#    main_thread.setDaemon = False
-#    main_thread.start()
-#    monitor_thread.setDaemon = False
-#    monitor_thread.start()
+    #    main_thread.setDaemon = False
+    #    main_thread.start()
+    #    monitor_thread.setDaemon = False
+    #    monitor_thread.start()
     while check_threads(threads):
         try:
             cmd = input('>')
@@ -108,7 +114,4 @@ def get_args():
 
 
 if __name__ == '__main__':
-    args = get_args()
-    verbose = args.verbose
-    dry_run = args.dryrun
-    main_program(args)
+    main_program()

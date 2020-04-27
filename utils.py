@@ -1,14 +1,16 @@
 # misc functions
-from nfoparser import get_xml_movie_title, get_xml
-from defs import vid_extensions, min_filesize
-from stringutils import sanatized_string
 import os
 import re
-import shutil
-from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
+from pathlib import Path, PurePath
 
 import psutil
 
+from defs import vid_extensions, min_filesize
+from nfoparser import get_xml_movie_title, get_xml
+from stringutils import sanatized_string
+
+
+# noinspection PyUnusedFunction
 def has_handle(fpath):
     for proc in psutil.process_iter():
         try:
@@ -118,7 +120,7 @@ def get_folders_non_empty(base_path):
 def get_video_filelist(movie_path, verbose=True, dry_run=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
-    filelist = []
+    # filelist = []
     filelist = [file for file in scan_path(movie_path, vid_extensions, min_size=min_filesize)]
     if len(filelist) > 1:
         print(f'Mutiple vid files in {movie_path} skipping')
@@ -213,7 +215,7 @@ def test_fix_filenames():
     fix_filenames_files(movie_path, base_path, verbose, dry_run)
 
 
-def sanatize_filenames_MainThread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
+def sanatize_filenames_mainthread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
     # remove [xxx] from all filenames
     # refresh movie_folder
     # update_folders()
@@ -225,7 +227,7 @@ def sanatize_filenames_MainThread(input_folder=None, folder_list=None, verbose=T
     # refresh again incase of renames...
     # update_folders()
 
-def sanatize_foldernames_MainThread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
+def sanatize_foldernames_mainthread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
     # remove [xxx] from all foldernames
     # refresh movie_folder
     # update_folders()
