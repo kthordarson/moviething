@@ -4,7 +4,7 @@ from queue import Queue, Empty
 import time
 from utils import get_folders, get_folders_non_empty, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, \
     fix_filenames_path
-from nfoparser import get_xml_data, get_xml
+from nfoparser import get_xml_data, get_xml, get_xml_score
 from importmovie import import_movie, import_check_path, import_process_path
 import os
 import shutil
@@ -82,7 +82,7 @@ class MainThread(Thread):
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)} {len(self.xml_list)}')
         # start fresh
-        self.movie_list = [MovieClass(movie_data=get_xml_data(file), movie_path=os.path.dirname(file)) for file in
+        self.movie_list = [MovieClass(movie_data=get_xml_data(file), movie_path=os.path.dirname(file), movie_xml=file) for file in
                            self.xml_list]
         if self.verbose:
             print(f'Found {len(self.movie_list)} movies ')
@@ -127,35 +127,11 @@ class MainThread(Thread):
         for movie in self.movie_list:
             # print(f"{movie.movie_data['movie']['id']}")
             try:
-                print(f'p: {movie.get_path()} t: {movie.get_title()} y: {movie.get_year()} imdb: {movie.get_imdb_id()}')
+                print(f'p: {movie.get_path()} t: {movie.get_title()} y: {movie.get_year()} imdb: {movie.get_imdb_id()} xml_score: {movie.get_xml_score()}')
             except TypeError as e:
                 print(f'dump_movies TypeError {movie.moviepath} {e}')
             except Exception as e:
                 print(f'dump_movies other exception {movie.moviepath} {e}')
-
-    def sanatize_filenames(self, input_folder=None):
-        # remove [xxx] from all filenames
-        # refresh movie_folder
-        self.update_folders()
-        if input_folder is None:
-            for movie_folder in self.folder_list:
-                sanatize_filenames(movie_folder, verbose=self.verbose, dry_run=self.dry_run)
-        else:
-            sanatize_filenames(input_folder, verbose=self.verbose, dry_run=self.dry_run)
-        # refresh again incase of renames...
-        self.update_folders()
-
-    def sanatize_foldernames(self, input_folder=None):
-        # remove [xxx] from all foldernames
-        # refresh movie_folder
-        self.update_folders()
-        if input_folder is None:
-            for movie_folder in self.folder_list:
-                sanatize_foldernames(movie_folder, verbose=self.verbose, dry_run=self.verbose)
-        else:
-            sanatize_foldernames(input_folder, verbose=self.verbose, dry_run=self.verbose)
-        # refresh again incase of renames...
-        self.update_folders()
 
     def fix_path_names(self, input_folder=None):
         # for movie folder names only
@@ -251,10 +227,12 @@ class Monitor(Thread):
         super().join()
 
 class MovieClass(object):
-    def __init__(self, movie_data, movie_path):
+    def __init__(self, movie_data, movie_path, movie_xml):
         self.movie_data = movie_data
         self.moviepath = movie_path  # os.path.dirname(file)
         self.moviefile = get_video_filelist(self.moviepath)
+        self.movie_xml = movie_xml
+        self.xml_score = get_xml_score(self.movie_xml)
 
     def get_path(self):
         # return str path to movie
@@ -280,6 +258,8 @@ class MovieClass(object):
         else:
             return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
 
+    def get_xml_score(self):
+        return self.xml_score
 
 if __name__ == '__main__':
     pass

@@ -1,5 +1,6 @@
 # nfo parser
 # read and parse nfo files, return valid info
+import inspect
 import concurrent.futures
 import glob
 # import mmap
@@ -22,6 +23,8 @@ from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
 
 # from classes import *
 
+def who_called_func():
+    return inspect.stack()[2][3]
 
 def etree_get_dchildren(children):
     dd = defaultdict(list)
@@ -59,11 +62,34 @@ def get_xml_data(file):
 #        tree = et.parse(file)
 #        root = tree.getroot()
 #        xml_data = etree_to_dict(root)
-        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get('Title') or None
+        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get('Title')  or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
 
+def get_xml_score(file):
+    
+    # print(type(file))
+    valid_score = 0
+    if type(file) == str:
+        xml_file = file
+    else:
+        xml_file = file.path
+    try:
+        data = et.parse(xml_file).getroot()
+        # tag_list = [tag.tag for tag in data]
+        valid_score += len([k.text for k in data.findall('id')])
+        valid_score += len([k.text for k in data.findall('IMDBiD')]) # IMDbId
+        valid_score += len([k.text for k in data.findall('IMDbId')])
+        valid_score += len([k.text for k in data.findall('title')])
+        valid_score += len([k.text for k in data.findall('Title')])
+        valid_score += len([k.text for k in data.findall('originaltitle')])
+        # print(f'get_xml_score: caller: {who_called_func()} {file} score: {valid_score}')
+        return valid_score
+    except Exception as e:
+        print(f'get_xml_score: Invalid XML {xml_file} {e}')
+        return 0
+    
 
 def is_valid_xml(file):
     # print(type(file))
@@ -73,7 +99,9 @@ def is_valid_xml(file):
         xml_file = file.path
     try:
         et.parse(xml_file).getroot()
-        # print(f'is_valid_xml: {root} {file}')
+        # score = get_xml_score(file)
+        # tag_list = [tag.tag for tag in data]
+        # print(f'is_valid_xml: caller: {who_called_func()} {file} {score}')
         return True
     except Exception as e:
         print(f'is_valid_xml: Invalid XML {xml_file} {e}')
@@ -109,6 +137,7 @@ def get_xml(movie_path):
     # scan movie_path for valid xml, return first xml found
     # todo fix if more than one found.....
     # print(f'get_xml {movie_path}')
+    # print(f'get_xml: caller {who_called_func()}')
     if type(movie_path) != str:
         # for debugging and testing
         input_movie_path = str(movie_path.path)
@@ -124,9 +153,9 @@ def get_xml(movie_path):
         return None
     if len(xml) == 0:
         return None
-    elif len(xml) == 1:
+    elif len(xml) == 1 and is_valid_xml(xml[0]):
         return xml[0]
-    else:
+    elif len(xml) > 1:
         print(f'Multiple xml found in {input_movie_path}')
         newxml = combine_xml(xml)
         result = et.ElementTree(element=newxml.getroot())
@@ -145,6 +174,8 @@ def get_xml(movie_path):
         except Exception as e:
             print(f'get_xml ERR {e} while saving new combined xml')
             return None
+    else:
+        return None
 
 
 def combine_xml(files):
@@ -170,8 +201,8 @@ def get_xml_movie_title(xml_file):
         movie_year = root.find('year').text
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'
         return title
-    except Exception:  # as e:
-        # print(f'get_xml_title: {xml_file} error {e}')
+    except Exception as e:  # as e:
+        print(f'get_xml_title: {xml_file} error {e}')
         return None
 
 

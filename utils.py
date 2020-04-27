@@ -213,6 +213,31 @@ def test_fix_filenames():
     fix_filenames_files(movie_path, base_path, verbose, dry_run)
 
 
+def sanatize_filenames_MainThread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
+    # remove [xxx] from all filenames
+    # refresh movie_folder
+    # update_folders()
+    if input_folder is None:
+        for movie_folder in folder_list:
+            sanatize_filenames(movie_folder, verbose=verbose, dry_run=dry_run)
+    else:
+        sanatize_filenames(input_folder, verbose=verbose, dry_run=dry_run)
+    # refresh again incase of renames...
+    # update_folders()
+
+def sanatize_foldernames_MainThread(input_folder=None, folder_list=None, verbose=True, dry_run=True):
+    # remove [xxx] from all foldernames
+    # refresh movie_folder
+    # update_folders()
+    if input_folder is None:
+        for movie_folder in folder_list:
+            sanatize_foldernames(movie_folder, verbose=verbose, dry_run=verbose)
+    else:
+        sanatize_foldernames(input_folder, verbose=verbose, dry_run=verbose)
+    # refresh again incase of renames...
+    # update_folders()
+
+
 if __name__ == '__main__':
     pass
     # test_fix_filenames()
