@@ -73,6 +73,7 @@ def get_xml_data(file):
 
 
 def get_xml_score(file):
+    # todo need to fix this...
     # print(type(file))
     valid_score = 0
     if type(file) == str:
@@ -85,6 +86,7 @@ def get_xml_score(file):
         valid_score += len([k.text for k in data.findall('id')])
         valid_score += len([k.text for k in data.findall('IMDBiD')])  # IMDbId
         valid_score += len([k.text for k in data.findall('IMDbId')])
+        # valid_score += len([k.text for k in data.findall('imdb_link')])
         valid_score += len([k.text for k in data.findall('title')])
         valid_score += len([k.text for k in data.findall('Title')])
         valid_score += len([k.text for k in data.findall('originaltitle')])
@@ -102,11 +104,12 @@ def is_valid_xml(file):
     else:
         xml_file = file.path
     try:
-        et.parse(xml_file).getroot()
+        data = et.parse(xml_file).getroot()
         # score = get_xml_score(file)
-        # tag_list = [tag.tag for tag in data]
+        tag_list = [tag.tag for tag in data]
         # print(f'is_valid_xml: caller: {who_called_func()} {file} {score}')
-        return True
+        if len(tag_list) >= 1:
+            return True
     except Exception as e:
         print(f'is_valid_xml: Invalid XML {xml_file} {e}')
         return False

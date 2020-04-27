@@ -17,14 +17,14 @@ title_year_regex = re.compile(r'(^.+)(\(\d{4}\).?)$')
 base_url = 'http://www.imdb.com/title/'
 
 
-def imdb_scrape(id):
+def imdb_scrape_id(id):
     # id is string with valid imdb id format: tt0000000
     # returns dict with movie info
     headers = {
         "Accept-Language" : "en-US,en;q=0.5",
         "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0",
     }
-    data = dict()
+    # data = dict()
     url = base_url + id
     try:
         page = get(url,headers=headers)
@@ -39,48 +39,47 @@ def imdb_scrape(id):
     # tree = parse(base_url+id)
     # print(tree)
     try:
-        movie_data =  soup.find('div', class_ = 'title_wrapper')
-        title_year = movie_data.find('h1').text.replace('\xa0', ' ')
-        # title_year = title_year.replace('\xa0', ' ')
-        title, year = title_year_regex.search(title_year).groups()
-        info = unicodedata.normalize("NFKD",movie_data.find(class_='subtext').text).replace(replace_break, '') # .text.split('|'))
-        rating, duration, genre, fulldate = info.split('|')
-        # print(f'title: {title_year}')
-        data['title'] = title
-        data['year'] = year.strip('() ')
-        data['rating'] = rating.strip(strip_chars)
-        data['duration'] = duration.strip(strip_chars)
-        data['genre'] = genre.strip(strip_chars)
-        data['fulldate'] = fulldate.strip(strip_chars)
-        data['title_year'] = title_year
+        data = parse_imdb_data(soup, id)
         return data
     except Exception as e:
         print(f'imdb_scrape: err in scrape {e}')
         return None
 
-def imdb_debug(id):
+def parse_imdb_data(soup, id):
     data = dict()
+    movie_data =  soup.find('div', class_ = 'title_wrapper')
+    title_year = movie_data.find('h1').text.replace('\xa0', ' ').strip()
+    # title_year = title_year.replace('\xa0', ' ')
+    title, year = [_.strip('() ') for _ in title_year_regex.search(title_year).groups()]
+    info = unicodedata.normalize("NFKD",movie_data.find(class_='subtext').text).replace(replace_break, '') # .text.split('|'))
+    rating, duration, genre, fulldate = [_.strip() for _ in info.split('|')]
+    # print(f'title: {title_year}')
+    data['id'] = id
+    data['IMDbId'] = id
+    data['imdb_link'] = base_url + id
+    data['title'] = title
+    data['year'] = year
+    data['title_year'] = title_year
+    data['rating'] = rating
+    data['duration'] = duration
+    data['genre'] = genre
+    data['fulldate'] = fulldate
+    return data
+
+def scrape_movie(movie):
+    new_data = None
+    # scrape movie info...
+    print(f'Start scraping {movie.moviefile} imdb_id {movie.get_imdb_id()}')
+    new_data = imdb_scrape_id(movie.get_imdb_id()) or None
+    test_imdb_save(new_data)
+    return new_data
+
+def imdb_debug(id):
     testfile = 'c:/Users/kthor/Documents/development/moviething/testingstuff/taxi_ff.html'
     with open(testfile, 'r') as f:
         testdata = f.read()
     soup = BeautifulSoup(testdata, 'html.parser')
-    movie_data =  soup.find('div', class_ = 'title_wrapper')
-    title_year = movie_data.find('h1').text.replace('\xa0', ' ')
-    # title_year = title_year.replace('\xa0', ' ')
-    title, year = title_year_regex.search(title_year).groups()
-    info = unicodedata.normalize("NFKD",movie_data.find(class_='subtext').text).replace(replace_break, '') # .text.split('|'))
-    rating, duration, genre, fulldate = info.split('|')
-    # print(f'title: {title_year}')
-    data['id'] = id
-    data['IMDbId'] = id
-    data['imdblink'] = base_url + id
-    data['title'] = title
-    data['year'] = year.strip('() ')
-    data['rating'] = rating.strip(strip_chars)
-    data['duration'] = duration.strip(strip_chars)
-    data['genre'] = genre.strip(strip_chars)
-    data['fulldate'] = fulldate.strip(strip_chars)
-    data['title_year'] = title_year
+    data = parse_imdb_data(soup, id)
     return data
 
 def test_imdb_save(data_input):
@@ -100,8 +99,9 @@ def test_imdb_save(data_input):
         # with open(result_file, mode='w', encoding='utf-8') as f:
     with open(result_file, mode='w') as f:
         f.write(pretty_data)
+    print(f'scraper: Saved {result_file}')
 
 if __name__ == '__main__':
-    # res = imdb_scrape('tt0152930')
+    # res = imdb_scrape_id('tt0152930')
     res = imdb_debug('tt0152930')
     test_imdb_save(res)

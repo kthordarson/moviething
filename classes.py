@@ -6,6 +6,7 @@ from utils import get_folders, get_folders_non_empty, get_video_filelist, sanati
     fix_filenames_path
 from nfoparser import get_xml_data, get_xml, get_xml_score
 from importmovie import import_movie, import_check_path, import_process_path
+from scrapers import scrape_movie
 import os
 import shutil
 from shutil import Error
@@ -23,6 +24,7 @@ class MainThread(Thread):
         self.kill = False
         self.movie_list = []
         self.xml_list = []
+        self.scrape_threads = list()
 
     def run(self):
         if self.verbose:
@@ -45,6 +47,7 @@ class MainThread(Thread):
             if self.kill:
                 return
             if self.verbose:
+                print(f'scrape threads: {len(self.scrape_threads)}')
                 pass
                 # print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run}')
             time.sleep(1)
@@ -77,6 +80,7 @@ class MainThread(Thread):
             print(f'set_base_path {base_path} not found')
 
     def populate_movies(self):
+        # make the movie list from our movie folders and xml's found within
         # get new xml's
         self.update_xml_list()
         if self.verbose:
@@ -86,9 +90,20 @@ class MainThread(Thread):
                            self.xml_list]
         if self.verbose:
             print(f'Found {len(self.movie_list)} movies ')
+        if len(self.movie_list) >= 1:
+            # check movies
+            # scrape_threads = list()
+            for movie in self.movie_list:
+                if movie.get_xml_score() <= 1 and movie.get_imdb_id() is not None:
+                    # print(f'scrape {movie.get_path()}')
+                    scraper = Thread(target=scrape_movie, args=(movie,))
+                    self.scrape_threads.append(scraper)
+                    scraper.start()
+                    # pass
+                    # movie_data = scrape_movie(movie)
 
     def update_xml_list(self):
-        self.update_folders()
+        # refresh xml list
         self.xml_list = [get_xml(movie_path) for movie_path in self.folder_list if get_xml(movie_path) is not None]
 
     def get_status(self):
@@ -102,6 +117,7 @@ class MainThread(Thread):
     def update(self):
         # full refresh
         self.update_folders()
+        self.update_xml_list()
         self.populate_movies()
 
     def update_folders(self):
@@ -259,7 +275,7 @@ class MovieClass(object):
             return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
 
     def get_xml_score(self):
-        return self.xml_score
+        return int(self.xml_score)
 
 if __name__ == '__main__':
     pass
