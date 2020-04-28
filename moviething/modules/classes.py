@@ -131,7 +131,7 @@ class MainThread(Thread):
 
     def dump_folders(self):
         # dumo our list of movie folders
-        _ = [print(f'{f.path}') for f in self.folder_list]
+        _ = [print(f'{f}') for f in self.folder_list]
 #        if self.folder_list:
 #            for f in self.folder_list:
 #                print(f'{f.path}')
@@ -151,8 +151,8 @@ class MainThread(Thread):
             if self.verbose:
                 print(f'Importing from path: {import_path}')
             # todo fix : attemt to get base movie name from import_path
-            import_name = import_path.parts[-1] # os.path.dirname(import_path).split('\\')[-1]
-            if Path.joinpath(self.base_path, import_name):  # os.path.exists(self.base_path + '\\' + import_name):
+            import_name = import_path.parts[-1] 
+            if Path.joinpath(self.base_path, import_name): 
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
             else:
@@ -184,7 +184,7 @@ class Monitor(Thread):
             self.folders = get_folders_non_empty(self.monitor_path)
 #            if len(self.folders) >= 1:
             for f in self.folders:
-                dest_name = Path.joinpath(self.base_path, f.parths[-1])   # os.path.join(self.base_path, f.parts[-1]) # self.base_path + '/' + os.path.basename(f.path)
+                dest_name = Path.joinpath(self.base_path, f.parths[-1]) 
                 # print(f'monitor: dest: {dest_name}')
                 # print(f'monitor: base: {self.base_path}')
                 if not Path(dest_name).exists():
@@ -210,7 +210,7 @@ class Monitor(Thread):
 class MovieClass(object):
     def __init__(self, movie_data, movie_path, movie_xml):
         self.movie_data = movie_data
-        self.moviepath = movie_path  # os.path.dirname(file)
+        self.moviepath = movie_path 
         self.moviefile = get_video_filelist(self.moviepath)
         self.movie_xml = movie_xml
         self.xml_score = get_xml_score(self.movie_xml)

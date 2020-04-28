@@ -105,8 +105,6 @@ def test_imdb_save(data_input):
     pretty_data = dataout.toprettyxml(indent=' ')
     result_file = 'testingstuff/' + data_input['title_year'] + '.xml'
     # result_file = 'c:/Users/kthor/Documents/development/moviething/testingstuff/taxi_ff.html.xml'
-#    if not os.path.exists(result_file):
-        # with open(result_file, mode='w', encoding='utf-8') as f:
     with open(result_file, mode='w') as f:
         f.write(pretty_data)
     print(f'scraper: Saved {result_file}')

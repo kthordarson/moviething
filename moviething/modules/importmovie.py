@@ -59,7 +59,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         print(f'import_process_path: {base_path} {movie_path} {verbose} {dry_run}')
     xml = get_xml(movie_path)
     movie_title = get_xml_movie_title(xml)
-    import_name = movie_path.parts[-1]  # os.path.dirname(movie_path).split('\\')[-1]
+    import_name = movie_path.parts[-1] 
     if movie_path != import_name:
         os.rename(src=movie_path, dst=base_path + '/' + movie_title)
 

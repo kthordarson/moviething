@@ -73,10 +73,6 @@ def get_xml_score(xml_file):
     # todo need to fix this...
     # print(type(file))
     valid_score = 0
-    # if type(file) == str:
-    #     xml_file = file
-    # else:
-    #     xml_file = file.path
     try:
         data = et.parse(str(xml_file)).getroot()
         # tag_list = [tag.tag for tag in data]
@@ -96,10 +92,6 @@ def get_xml_score(xml_file):
 
 def is_valid_xml(xml_file):
     # print(type(file))
-    # if type(file) == str:
-    #     xml_file = file
-    # else:
-    #     xml_file = file.path
     try:
         data = et.parse(str(xml_file)).getroot()
         # score = get_xml_score(file)
@@ -116,10 +108,6 @@ def is_valid_xml(xml_file):
 def get_xml_list(movie_path):
     # return a list of valid / parsable xml files from movie_path
     # print(type(movie_path))
-    # if type(movie_path) is not str:
-    #     input_movie_path = str(movie_path.path)
-    # else:
-    #     input_movie_path = movie_path
     xml_list = movie_path.glob('*.xml')   # glob.glob(movie_path + '/*.xml', recursive=False)
     result = [xml for xml in xml_list if is_valid_xml(xml)]
     return result
@@ -128,10 +116,6 @@ def get_xml_list(movie_path):
 def get_nfo_list(movie_path):
     # return a list of valid / parsable nfo files from movie_path
     # print(type(movie_path))
-    # if type(movie_path) is not str:
-    #     input_movie_path = str(movie_path.path)
-    # else:
-    #     input_movie_path = movie_path
     nfo_list = movie_path.glob('*.xml')  #  glob.glob(movie_path + '/*.nfo', recursive=False)
     result = [nfo for nfo in nfo_list if is_valid_nfo(nfo)]
     return result
@@ -142,13 +126,6 @@ def get_xml(movie_path):
     # todo fix if more than one found.....
     # print(f'get_xml {movie_path}')
     # print(f'get_xml: caller {who_called_func()}')
-    # if type(movie_path) != str:
-    #     # for debugging and testing
-    #     input_movie_path = str(movie_path.path)
-    # else:
-    #     input_movie_path = movie_path
-    # xml = None
-    # print(f'get_xml: {input_movie_path} {type(input_movie_path)} {type(movie_path)}')
     try:
         xml = [xml for xml in movie_path.glob('*.xml')] #glob.glob(movie_path + '/**.xml', recursive=False)  # movie_path+'/*.xml')
         # print(f'got xml {xml}')
@@ -163,7 +140,7 @@ def get_xml(movie_path):
         print(f'Multiple xml found in {movie_path}')
         newxml = combine_xml(xml)
         result = et.ElementTree(element=newxml.getroot())
-        result_filename = Path.joinpath(movie_path.parts[-1] + '.xml')  # os.path.join(movie_path, PurePath(input_movie_path).parts[-1] + '.xml')
+        result_filename = Path.joinpath(movie_path.parts[-1] + '.xml') 
         for f in xml:
             try:
                 os.rename(src=f, dst=f + '.olddata')

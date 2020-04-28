@@ -56,7 +56,6 @@ def get_folders(base_path):
     # folders = []
     try:
         return [d for d in base_path.glob('*') if d.is_dir()]
-        # return [d for d in os.scandir(base_path) if os.path.isdir(d)]
     except Exception as e:
         print(f'get_folders: {e}')
         # exit(-1)
@@ -65,8 +64,6 @@ def get_folders(base_path):
 
 def get_folders_non_empty(base_path):
     try:
-        # sum(os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f))
-        # folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
         folders = [d for d in base_path.glob('*') if d.is_dir()]
         result = []
         for path in folders:
