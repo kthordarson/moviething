@@ -9,7 +9,7 @@ from moviething.modules.scrapers import scrape_movie
 import os
 import shutil
 from shutil import Error
-
+from pathlib import Path
 class MainThread(Thread):
     # noinspection PySameParameterValue
     def __init__(self, name, monitor_q=Queue(), base_path='',  verbose=True, dry_run=True):
@@ -75,7 +75,7 @@ class MainThread(Thread):
         print(f'q_process: {item}')
         try:
             # os.rename(src=i.path, dst='d:/moviestest')
-            shutil.move(src=str(item), dst=self.base_path)
+            shutil.move(src=item, dst=self.base_path)
             # self.import_from_path(item):
         except Error as e:
             print(f'grab_folder: {e}')
@@ -83,7 +83,7 @@ class MainThread(Thread):
             print(f'grab_folder: EXCEPTION {e}')
             # exit(-1)
     def set_base_path(self, base_path):
-        if os.path.exists(base_path):
+        if base_path.exists():
             self.base_path = base_path
             if self.verbose:
                 print(f'Set base_path to {self.base_path}')
@@ -101,7 +101,7 @@ class MainThread(Thread):
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)} {len(self.xml_list)}')
         # start fresh
-        self.movie_list = [MovieClass(movie_data=get_xml_data(file), movie_path=os.path.dirname(file), movie_xml=file) for file in
+        self.movie_list = [MovieClass(movie_data=get_xml_data(file), movie_path=file.parent, movie_xml=file) for file in
                            self.xml_list]
         if self.verbose:
             print(f'Found {len(self.movie_list)} movies ')
@@ -145,14 +145,14 @@ class MainThread(Thread):
 
     def dump_movie_list(self):
         _ = [print(f'{movie.get_title()}') for movie in self.movie_list]
-        
+
     def import_from_path(self, import_path):
         if import_check_path(import_path):
             if self.verbose:
                 print(f'Importing from path: {import_path}')
             # todo fix : attemt to get base movie name from import_path
             import_name = import_path.parts[-1] # os.path.dirname(import_path).split('\\')[-1]
-            if os.path.exists(self.base_path + '\\' + import_name):
+            if Path.joinpath(self.base_path, import_name):  # os.path.exists(self.base_path + '\\' + import_name):
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
             else:
@@ -184,10 +184,10 @@ class Monitor(Thread):
             self.folders = get_folders_non_empty(self.monitor_path)
 #            if len(self.folders) >= 1:
             for f in self.folders:
-                dest_name = os.path.join(self.base_path, f.parts[-1]) # self.base_path + '/' + os.path.basename(f.path)
+                dest_name = Path.joinpath(self.base_path, f.parths[-1])   # os.path.join(self.base_path, f.parts[-1]) # self.base_path + '/' + os.path.basename(f.path)
                 # print(f'monitor: dest: {dest_name}')
                 # print(f'monitor: base: {self.base_path}')
-                if not os.path.exists(dest_name):
+                if not Path(dest_name).exists():
                     # todo file_object = open(entry.path, 'a', 8)
                     # todo check if we can move files before putting into q
                     print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
@@ -217,11 +217,11 @@ class MovieClass(object):
 
     def get_path(self):
         # return str path to movie
-        return str(self.moviepath)
+        return self.moviepath
 
     def get_videofile(self):
         # return str full path of videofile
-        return str(self.moviefile.name)
+        return self.moviefile.name
 
     def get_video(self):
         # return direntry of movie

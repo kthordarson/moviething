@@ -1,2 +1,6 @@
 unidecode
 lxml
+psutil
+bs4
+pycallgraph
+python3-pydot

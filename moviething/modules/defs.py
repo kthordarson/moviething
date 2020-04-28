@@ -50,8 +50,8 @@ mediainfo_tags = [
 ]
 
 vid_extensions = (
-    'mp4', 'mpeg', 'mpg', 'mp2', 'mpe', 'mvpv', 'mp4', 'm4p', 'm4v', 'mov', 'qt', 'avi', 'ts', 'mkv', 'wmv', 'ogv',
-    'webm', 'ogg'
+    '.mp4', '.mpeg', '.mpg', '.mp2', '.mpe', '.mvpv', '.mp4', '.m4p', '.m4v', '.mov', '.qt', '.avi', '.ts', '.mkv', '.wmv', '.ogv',
+    '.webm', '.ogg'
 )
 
 min_filesize = 40000000

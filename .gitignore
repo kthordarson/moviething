@@ -7,3 +7,4 @@ testingstuff/*
 .idea/*
 .mypy_cache/*
 stopmoviething.ps1
+pycallgraph.png

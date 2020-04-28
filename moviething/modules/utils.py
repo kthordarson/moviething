@@ -16,38 +16,38 @@ def who_called_func():
 
 def can_open_file(file):
     # check if we can get handle
-    print(f'can_open_file: {file.path}')
+    print(f'can_open_file: {file}')
     try:
-        file_object = open(file.path, 'a', 8)
+        file_object = open(file, 'a', 8)
         if file_object:
             return True
         else:
             return False
     except IOError as e:
-        print(f'scan_path: IOERROR {e} on {file.path}')
+        print(f'scan_path: IOERROR {e} on {file}')
         return False
     except Exception as e:
-        print(f'scan_path: EXCEPTION {e} on {file.path}')
+        print(f'scan_path: EXCEPTION {e} on {file}')
         return False
     
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            yield from scan_path(entry.path, extensions, min_size)
+    for entry in path.glob('*'):
+        if entry.is_dir():
+            yield from scan_path(entry, extensions, min_size)
         else:
-            if entry.name.endswith(extensions) and entry.stat().st_size > min_size:
+            if entry.suffix in extensions and entry.stat().st_size > min_size:
                 yield entry
 
 def scan_path_open(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     # checks if file is open
     # print(f'scanpathopen....')
-    for entry in os.scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            yield from scan_path_open(entry.path, extensions, min_size)
+    for entry in path.glob('*'):  # os.scandir(path):
+        if entry.is_dir():
+            yield from scan_path_open(entry, extensions, min_size)
         else:
-            if entry.name.endswith(extensions) and entry.stat().st_size > min_size and can_open_file(entry):
+            if entry.suffix in extensions and entry.stat().st_size > min_size and can_open_file(entry):
                 yield entry
 
 
@@ -55,7 +55,8 @@ def get_folders(base_path):
     # returns a list of folders in base_path
     # folders = []
     try:
-        return [d for d in os.scandir(base_path) if os.path.isdir(d)]
+        return [d for d in base_path.glob('*') if d.is_dir()]
+        # return [d for d in os.scandir(base_path) if os.path.isdir(d)]
     except Exception as e:
         print(f'get_folders: {e}')
         # exit(-1)
@@ -65,14 +66,15 @@ def get_folders(base_path):
 def get_folders_non_empty(base_path):
     try:
         # sum(os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f))
-        folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
+        # folders = [d for d in os.scandir(base_path) if os.path.isdir(d)]
+        folders = [d for d in base_path.glob('*') if d.is_dir()]
         result = []
         for path in folders:
-            root_directory = Path(path)
+            # root_directory = Path(path)
             # file_object = open(f, 'a', 8)
             if len([file for file in scan_path_open(path, vid_extensions, min_size=min_filesize)]) >= 1:
                 # print(f'get_folders_non_empty: {file}')
-                result.append(PurePath(root_directory))
+                result.append(path)
 #            if sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) > 1:
 #                result.append(PurePath(root_directory))
     except Exception as e:

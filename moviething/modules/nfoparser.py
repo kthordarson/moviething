@@ -62,23 +62,23 @@ def get_xml_data(file):
         #        tree = et.parse(file)
         #        root = tree.getroot()
         #        xml_data = etree_to_dict(root)
-        return etree_to_dict(et.parse(file).getroot()).get('movie') or etree_to_dict(et.parse(file).getroot()).get(
+        return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(et.parse(str(file)).getroot()).get(
             'Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
 
 
-def get_xml_score(file):
+def get_xml_score(xml_file):
     # todo need to fix this...
     # print(type(file))
     valid_score = 0
-    if type(file) == str:
-        xml_file = file
-    else:
-        xml_file = file.path
+    # if type(file) == str:
+    #     xml_file = file
+    # else:
+    #     xml_file = file.path
     try:
-        data = et.parse(xml_file).getroot()
+        data = et.parse(str(xml_file)).getroot()
         # tag_list = [tag.tag for tag in data]
         valid_score += len([k.text for k in data.findall('id')])
         valid_score += len([k.text for k in data.findall('IMDBiD')])  # IMDbId
@@ -94,14 +94,14 @@ def get_xml_score(file):
         return 0
 
 
-def is_valid_xml(file):
+def is_valid_xml(xml_file):
     # print(type(file))
-    if type(file) == str:
-        xml_file = file
-    else:
-        xml_file = file.path
+    # if type(file) == str:
+    #     xml_file = file
+    # else:
+    #     xml_file = file.path
     try:
-        data = et.parse(xml_file).getroot()
+        data = et.parse(str(xml_file)).getroot()
         # score = get_xml_score(file)
         tag_list = [tag.tag for tag in data]
         # print(f'is_valid_xml: caller: {who_called_func()} {file} {score}')
@@ -116,11 +116,11 @@ def is_valid_xml(file):
 def get_xml_list(movie_path):
     # return a list of valid / parsable xml files from movie_path
     # print(type(movie_path))
-    if type(movie_path) is not str:
-        input_movie_path = str(movie_path.path)
-    else:
-        input_movie_path = movie_path
-    xml_list = glob.glob(input_movie_path + '/*.xml', recursive=False)
+    # if type(movie_path) is not str:
+    #     input_movie_path = str(movie_path.path)
+    # else:
+    #     input_movie_path = movie_path
+    xml_list = movie_path.glob('*.xml')   # glob.glob(movie_path + '/*.xml', recursive=False)
     result = [xml for xml in xml_list if is_valid_xml(xml)]
     return result
 
@@ -128,11 +128,11 @@ def get_xml_list(movie_path):
 def get_nfo_list(movie_path):
     # return a list of valid / parsable nfo files from movie_path
     # print(type(movie_path))
-    if type(movie_path) is not str:
-        input_movie_path = str(movie_path.path)
-    else:
-        input_movie_path = movie_path
-    nfo_list = glob.glob(input_movie_path + '/*.nfo', recursive=False)
+    # if type(movie_path) is not str:
+    #     input_movie_path = str(movie_path.path)
+    # else:
+    #     input_movie_path = movie_path
+    nfo_list = movie_path.glob('*.xml')  #  glob.glob(movie_path + '/*.nfo', recursive=False)
     result = [nfo for nfo in nfo_list if is_valid_nfo(nfo)]
     return result
 
@@ -142,28 +142,28 @@ def get_xml(movie_path):
     # todo fix if more than one found.....
     # print(f'get_xml {movie_path}')
     # print(f'get_xml: caller {who_called_func()}')
-    if type(movie_path) != str:
-        # for debugging and testing
-        input_movie_path = str(movie_path.path)
-    else:
-        input_movie_path = movie_path
+    # if type(movie_path) != str:
+    #     # for debugging and testing
+    #     input_movie_path = str(movie_path.path)
+    # else:
+    #     input_movie_path = movie_path
     # xml = None
     # print(f'get_xml: {input_movie_path} {type(input_movie_path)} {type(movie_path)}')
     try:
-        xml = glob.glob(input_movie_path + '/**.xml', recursive=False)  # movie_path+'/*.xml')
+        xml = [xml for xml in movie_path.glob('*.xml')] #glob.glob(movie_path + '/**.xml', recursive=False)  # movie_path+'/*.xml')
         # print(f'got xml {xml}')
     except Exception as e:
-        print(f'Error in get_xml {input_movie_path} {e}')
+        print(f'Error in get_xml {movie_path} {e}')
         return None
     if len(xml) == 0:
         return None
     elif len(xml) == 1 and is_valid_xml(xml[0]):
         return xml[0]
     elif len(xml) > 1:
-        print(f'Multiple xml found in {input_movie_path}')
+        print(f'Multiple xml found in {movie_path}')
         newxml = combine_xml(xml)
         result = et.ElementTree(element=newxml.getroot())
-        result_filename = os.path.join(movie_path, PurePath(input_movie_path).parts[-1] + '.xml')
+        result_filename = Path.joinpath(movie_path.parts[-1] + '.xml')  # os.path.join(movie_path, PurePath(input_movie_path).parts[-1] + '.xml')
         for f in xml:
             try:
                 os.rename(src=f, dst=f + '.olddata')
@@ -273,8 +273,8 @@ def nfo_to_xml(nfo):
     data = et.tostring(tree.getroot(), method='xml')
     dataout = minidom.parseString(data)
     pretty_data = dataout.toprettyxml(indent=' ')
-    result_file = nfo + '.xml'
-    if not os.path.exists(result_file):
+    result_file = Path.joinpath(nfo, '.xml')   #  nfo + '.xml'
+    if not Path(result_file).exists():
         # with open(result_file, mode='w', encoding='utf-8') as f:
         with open(result_file, mode='w') as f:
             f.write(pretty_data)

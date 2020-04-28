@@ -11,7 +11,10 @@ in case of multiple nfo/xml merge into one
 import argparse
 from queue import Queue
 from moviething.modules.classes import MainThread, Monitor  # , MovieClass
+from pathlib import Path
 
+# from pycallgraph import PyCallGraph
+# from pycallgraph.output import GraphvizOutput
 
 # def check_main_thread(thread):
 #    return thread.isAlive()
@@ -39,10 +42,10 @@ def main_program():
     # dry_run = args.dryrun
     threads = list()
     monitor_q = Queue()
-    main_thread = MainThread('MainThread', monitor_q, base_path=args.path, verbose=args.verbose, dry_run=args.dryrun)
+    main_thread = MainThread('MainThread', monitor_q, base_path=Path(args.path), verbose=args.verbose, dry_run=args.dryrun)
     threads.append(main_thread)
     if args.monitor_path is not None:
-        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=args.monitor_path, base_path=args.path,
+        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=Path(args.monitor_path), base_path=Path(args.path),
                                  verbose=args.verbose, dry_run=args.dryrun)
         threads.append(monitor_thread)
     for t in threads:
@@ -67,12 +70,8 @@ def main_program():
                 main_thread.update_folders()
             if cmd[:6] == 'update':
                 main_thread.update()
-            if cmd[:7] == 'fixpath':
-                main_thread.fix_path_names()
-            if cmd[:7] == 'fixfile':
-                main_thread.fix_file_names()
             if cmd[:6] == 'import':
-                main_thread.import_from_path(cmd[7:])
+                main_thread.import_from_path(Path(cmd[7:]))
             if cmd[:7] == 'setbase':
                 main_thread.set_base_path(cmd[8:])
             if cmd[:4] == 'list':
