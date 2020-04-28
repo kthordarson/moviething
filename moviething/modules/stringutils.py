@@ -1,4 +1,4 @@
-from defs import valid_input_string_chars, char_limit, valid_tag_chars
+from moviething.modules.defs import valid_input_string_chars, char_limit, valid_tag_chars
 import unicodedata
 
 

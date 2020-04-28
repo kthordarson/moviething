@@ -1,8 +1,8 @@
 import os
 import shutil
 
-from nfoparser import get_xml, get_xml_movie_title
-from utils import get_video_filelist
+from moviething.modules.nfoparser import get_xml, get_xml_movie_title
+from moviething.modules.utils import get_video_filelist
 
 
 def import_check_path(import_path, verbose=True, dry_run=True):

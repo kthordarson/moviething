@@ -10,7 +10,7 @@ in case of multiple nfo/xml merge into one
  """
 import argparse
 from queue import Queue
-from classes import MainThread, Monitor  # , MovieClass
+from moviething.modules.classes import MainThread, Monitor  # , MovieClass
 
 
 # def check_main_thread(thread):
@@ -75,6 +75,8 @@ def main_program():
                 main_thread.import_from_path(cmd[7:])
             if cmd[:7] == 'setbase':
                 main_thread.set_base_path(cmd[8:])
+            if cmd[:4] == 'list':
+                main_thread.dump_movie_list()
         except KeyboardInterrupt:
             stop_all_threads(threads)
         except Exception as e:

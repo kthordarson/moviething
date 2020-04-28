@@ -9,6 +9,8 @@ import unicodedata
 import re
 import os
 from requests import get
+import time
+import random
 
 nonBreakSpace = u'\xa0'
 strip_chars = ' \n'
@@ -69,9 +71,17 @@ def parse_imdb_data(soup, id):
 def scrape_movie(movie):
     new_data = None
     # scrape movie info...
-    print(f'Start scraping {movie.moviefile} imdb_id {movie.get_imdb_id()}')
-    new_data = imdb_scrape_id(movie.get_imdb_id()) or None
-    test_imdb_save(new_data)
+    sltime = random.randint(2,9)
+    print(f'scrape_movie: Start scraping {movie.moviefile} imdb_id {movie.get_imdb_id()} sltime: {sltime}')
+    time.sleep(sltime) # sleep for imdb.... maybe pointless ?
+    new_data = imdb_scrape_id(movie.get_imdb_id())
+    if new_data is not None:
+        print(f'scrape_movie: Done scraping {movie.moviefile} imdb_id {movie.get_imdb_id()} sltime: {sltime}')
+        return new_data
+    else:
+        print(f'scrape_movie: scrape failed!')
+        return None
+    # test_imdb_save(new_data)
     return new_data
 
 def imdb_debug(id):

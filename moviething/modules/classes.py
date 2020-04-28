@@ -1,12 +1,11 @@
 # classes
-from threading import Thread
+from threading import Thread, active_count
 from queue import Queue, Empty
 import time
-from utils import get_folders, get_folders_non_empty, get_video_filelist, sanatize_filenames, sanatize_foldernames, fix_filenames_files, \
-    fix_filenames_path
-from nfoparser import get_xml_data, get_xml, get_xml_score
-from importmovie import import_movie, import_check_path, import_process_path
-from scrapers import scrape_movie
+from moviething.modules.utils import get_folders, get_folders_non_empty, get_video_filelist
+from moviething.modules.nfoparser import get_xml_data, get_xml, get_xml_score
+from moviething.modules.importmovie import import_movie, import_check_path, import_process_path
+from moviething.modules.scrapers import scrape_movie
 import os
 import shutil
 from shutil import Error
@@ -24,7 +23,7 @@ class MainThread(Thread):
         self.kill = False
         self.movie_list = []
         self.xml_list = []
-        self.scrape_threads = list()
+        
 
     def run(self):
         if self.verbose:
@@ -37,19 +36,35 @@ class MainThread(Thread):
             self.populate_movies()
         while True:
             try:
-                new_movie = self.monitor_q.get_nowait()
-                print(f'new_movie found: {new_movie}')
-                self.import_from_path(new_movie)
-                # self.grab_folder(new_movie)
-                self.monitor_q.task_done()
+                # [0] f: new movie
+                # [0] s: scrape
+                q_item = self.monitor_q.get_nowait()
+                # new_movie = self.monitor_q.get_nowait()
+                if q_item[0] == 'f':
+                    new_movie = q_item[1]
+                    print(f'new_movie found: {new_movie}')
+                    self.import_from_path(new_movie)
+                    # self.grab_folder(new_movie)
+                    self.monitor_q.task_done()
+                if q_item[0] == 's':
+                    pass
+                    # self.scrape_threads = list()
+                    # self.scrape_threads = q_item[1]
+                    # for t in self.scrape_threads:
+                    #     t.start()
+                    # scrape_t.daemon = False
+                    # scrape_t.start()
+                    # self.scrape_threads.append(scrape_t)
+                    # scrape_t.start()
+                    # self.monitor_q.task_done()
+                    # pass
             except Empty:
                 pass
             if self.kill:
                 return
             if self.verbose:
-                print(f'scrape threads: {len(self.scrape_threads)}')
-                pass
-                # print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run}')
+                self.get_status()
+                #pass
             time.sleep(1)
 
     def join(self, **kwargs):
@@ -67,7 +82,6 @@ class MainThread(Thread):
         except Exception as e:
             print(f'grab_folder: EXCEPTION {e}')
             # exit(-1)
-
     def set_base_path(self, base_path):
         if os.path.exists(base_path):
             self.base_path = base_path
@@ -83,6 +97,7 @@ class MainThread(Thread):
         # make the movie list from our movie folders and xml's found within
         # get new xml's
         self.update_xml_list()
+        # self.scrape_threads = list()
         if self.verbose:
             print(f'populate_movies from {self.base_path} {len(self.folder_list)} {len(self.xml_list)}')
         # start fresh
@@ -90,17 +105,6 @@ class MainThread(Thread):
                            self.xml_list]
         if self.verbose:
             print(f'Found {len(self.movie_list)} movies ')
-        if len(self.movie_list) >= 1:
-            # check movies
-            # scrape_threads = list()
-            for movie in self.movie_list:
-                if movie.get_xml_score() <= 1 and movie.get_imdb_id() is not None:
-                    # print(f'scrape {movie.get_path()}')
-                    scraper = Thread(target=scrape_movie, args=(movie,))
-                    self.scrape_threads.append(scraper)
-                    scraper.start()
-                    # pass
-                    # movie_data = scrape_movie(movie)
 
     def update_xml_list(self):
         # refresh xml list
@@ -112,7 +116,8 @@ class MainThread(Thread):
             fsize = len(self.folder_list)
         else:
             fsize = 0
-        print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run} f:{fsize} bp:{self.base_path}')
+        # print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run} f:{fsize} bp:{self.base_path}')
+        print(f'MainThread: {self.name} running v:{self.verbose} dr:{self.dry_run} f:{fsize} bp:{self.base_path} active threads: {active_count()}')
 
     def update(self):
         # full refresh
@@ -122,65 +127,25 @@ class MainThread(Thread):
 
     def update_folders(self):
         # scan base folder for movie folders
-        if self.folder_list is not None:
-            fsize = len(self.folder_list)
-        else:
-            fsize = 0
         self.folder_list = get_folders(self.base_path)
-        if self.verbose:
-            print(f'Update_folders {fsize} {len(self.folder_list)}')
 
     def dump_folders(self):
         # dumo our list of movie folders
-        if self.folder_list:
-            for f in self.folder_list:
-                print(f'{f.path}')
+        _ = [print(f'{f.path}') for f in self.folder_list]
+#        if self.folder_list:
+#            for f in self.folder_list:
+#                print(f'{f.path}')
 
     def dump_movies(self):
         # dump movie list
         print('dumping movies')
         self.populate_movies()
         for movie in self.movie_list:
-            # print(f"{movie.movie_data['movie']['id']}")
-            try:
-                print(f'p: {movie.get_path()} t: {movie.get_title()} y: {movie.get_year()} imdb: {movie.get_imdb_id()} xml_score: {movie.get_xml_score()}')
-            except TypeError as e:
-                print(f'dump_movies TypeError {movie.moviepath} {e}')
-            except Exception as e:
-                print(f'dump_movies other exception {movie.moviepath} {e}')
+            movie.dump_info()
 
-    def fix_path_names(self, input_folder=None):
-        # for movie folder names only
-        # extract info from xml and rename paths and folder in self.folder_list or input_folder
-        # do nothing if no valid xml info was found
-
-        if input_folder is None:
-            self.update_folders()
-            for movie_folder in self.folder_list:
-                fix_filenames_path(movie_folder, self.base_path, self.verbose, self.dry_run)
-        else:
-            fix_filenames_path(input_folder, self.base_path, self.verbose, self.dry_run)
-
-    def fix_file_names(self, input_folder=None):
-        # for video filenames only within movie folder
-        # extract info from xml and rename paths and folder in self.folder_list or input_folder
-        # do nothing if no valid xml info was found
-        if input_folder is None:
-            if self.verbose:
-                print(f'fix_file_names: ALL')
-            self.update_folders()
-            for movie_folder in self.folder_list:
-                fix_filenames_files(movie_folder, self.base_path, self.verbose, self.dry_run)
-        else:
-            if self.verbose:
-                print(f'fix_file_names: {input_folder}')
-            fix_filenames_files(input_folder, self.base_path, self.verbose, self.dry_run)
-
-    def clean_path(self, movie_path):
-        # scan movie_path for unwanted files, move to junkignore subfolder if found
-        if self.verbose:
-            print(f'clean_path: {movie_path}')
-
+    def dump_movie_list(self):
+        _ = [print(f'{movie.get_title()}') for movie in self.movie_list]
+        
     def import_from_path(self, import_path):
         if import_check_path(import_path):
             if self.verbose:
@@ -226,7 +191,7 @@ class Monitor(Thread):
                     # todo file_object = open(entry.path, 'a', 8)
                     # todo check if we can move files before putting into q
                     print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
-                    self.monitor_q.put(f)
+                    self.monitor_q.put(('f',f))
                 else:
                     print(f'monitor: {dest_name} exists')
                         
@@ -276,6 +241,11 @@ class MovieClass(object):
 
     def get_xml_score(self):
         return int(self.xml_score)
+    
+    def dump_info(self):
+        for tag in self.movie_data:
+            print(f'{tag} : {self.movie_data[tag]}')
+        #pass
 
 if __name__ == '__main__':
     pass

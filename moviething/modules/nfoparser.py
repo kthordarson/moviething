@@ -1,6 +1,6 @@
 # nfo parser
 # read and parse nfo files, return valid info
-import inspect
+
 import concurrent.futures
 import glob
 # import mmap
@@ -16,17 +16,14 @@ from lxml import etree as et
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
 
-from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
+from moviething.modules.defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
 # from stringutils import sanatized_string
-from stringutils import sanatized_string
+from moviething.modules.stringutils import sanatized_string
+from moviething.modules.utils import who_called_func
 from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
 
 
 # from classes import *
-
-# noinspection PyUnusedFunction
-def who_called_func():
-    return inspect.stack()[2][3]
 
 
 def etree_get_dchildren(children):
