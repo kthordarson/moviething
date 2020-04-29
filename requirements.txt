@@ -1,7 +1,0 @@
-unidecode
-lxml
-psutil
-bs4
-pycallgraph
-ffprobe
-python3-pydot
