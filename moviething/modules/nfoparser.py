@@ -9,7 +9,7 @@ import re
 # import string
 import time
 # import unicodedata
-from collections import defaultdict
+
 # from xml.parsers.expat import ExpatError
 
 from lxml import etree as et
@@ -17,42 +17,13 @@ from lxml import etree as et
 from xml.dom import minidom
 
 from moviething.modules.defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
-# from stringutils import sanatized_string
+from moviething.modules.etree import etree_to_dict
 from moviething.modules.stringutils import sanatized_string
 from moviething.modules.utils import who_called_func
 from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
-
+# from stringutils import sanatized_string
 
 # from classes import *
-
-
-def etree_get_dchildren(children):
-    dd = defaultdict(list)
-    for dc in map(etree_to_dict, children):
-        for k, v in dc.items():
-            dd[k].append(v)
-    return dd
-
-
-def etree_to_dict(t):
-    # from https://stackoverflow.com/questions/7684333/converting-xml-to-dictionary-using-elementtree
-    d = {t.tag: {} if t.attrib else None}
-    children = list(t)
-    if children:
-        dd = etree_get_dchildren(children)
-        d = {t.tag: {k: v[0] if len(v) == 1 else v
-                     for k, v in dd.items()}}
-    if t.attrib:
-        d[t.tag].update(('@' + k, v)
-                        for k, v in t.attrib.items())
-    if t.text:
-        text = t.text.strip()
-        if children or t.attrib:
-            if text:
-                d[t.tag]['#text'] = text
-        else:
-            d[t.tag] = text
-    return d
 
 
 def get_xml_data(file):
@@ -76,13 +47,13 @@ def get_xml_score(xml_file):
     try:
         data = et.parse(str(xml_file)).getroot()
         # tag_list = [tag.tag for tag in data]
-        valid_score += len([k.text for k in data.findall('id')])
-        valid_score += len([k.text for k in data.findall('IMDBiD')])  # IMDbId
-        valid_score += len([k.text for k in data.findall('IMDbId')])
+        valid_score += len([k.text.lower() for k in data.findall('id')])
+        valid_score += len([k.text.lower() for k in data.findall('imdbid')])  # IMDbId / IMDBiD
+        # valid_score += len([k.text for k in data.findall('IMDbId')])
         # valid_score += len([k.text for k in data.findall('imdb_link')])
-        valid_score += len([k.text for k in data.findall('title')])
-        valid_score += len([k.text for k in data.findall('Title')])
-        valid_score += len([k.text for k in data.findall('originaltitle')])
+        valid_score += len([k.text.lower() for k in data.findall('title')])
+        # valid_score += len([k.text for k in data.findall('Title')])
+        # valid_score += len([k.text for k in data.findall('originaltitle')])
         # print(f'get_xml_score: caller: {who_called_func()} {file} score: {valid_score}')
         return valid_score
     except Exception as e:
@@ -177,7 +148,7 @@ def get_xml_movie_title(xml_file):
     # movie_title = None
     # title = None
     try:
-        root = et.parse(xml_file).getroot()
+        root = et.parse(str(xml_file)).getroot()
         movie_title = root.find('title').text
         movie_year = root.find('year').text
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'

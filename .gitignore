@@ -9,6 +9,7 @@ testingstuff/*
 stopmoviething.ps1
 pycallgraph.png
 moviething/__pycache__/*
+moviething/moviething/__pycache__/*
 moviething/modules/__pycache__/*
 moviething/modules/__pycache__/__init__.cpython-36.pyc
 *.py[cod]
@@ -29,3 +30,9 @@ moviething/modules/__pycache__/utils.cpython-36.pyc
 moviething/modules/__pycache__/utils.cpython-37.pyc
 moviething/__pycache__/__init__.cpython-36.pyc
 moviething/__pycache__/__init__.cpython-37.pyc
+moviething/__pycache__/__init__.cpython-37.pyc
+moviething/modules/__pycache__/__init__.cpython-37.pyc
+moviething/modules/__pycache__/importmovie.cpython-37.pyc
+moviething/modules/__pycache__/nfoparser.cpython-37.pyc
+moviething/modules/__pycache__/scrapers.cpython-37.pyc
+moviething/modules/__pycache__/utils.cpython-37.pyc

@@ -144,15 +144,16 @@ class MainThread(Thread):
             movie.dump_info()
 
     def dump_movie_list(self):
-        _ = [print(f'{movie.get_title()}') for movie in self.movie_list]
+        _ = [print(f'Title: {movie.get_title()} Year: {movie.get_year()} imdb: {movie.get_imdb_id()} x: {movie.get_xml_score()}') for movie in self.movie_list]
 
     def import_from_path(self, import_path):
         if import_check_path(import_path):
             if self.verbose:
                 print(f'Importing from path: {import_path}')
             # todo fix : attemt to get base movie name from import_path
-            import_name = import_path.parts[-1] 
-            if Path.joinpath(self.base_path, import_name): 
+            import_name = import_path.parts[-1]
+            dest_path = Path.joinpath(self.base_path, import_name)
+            if dest_path.exists(): 
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
             else:
@@ -184,7 +185,7 @@ class Monitor(Thread):
             self.folders = get_folders_non_empty(self.monitor_path)
 #            if len(self.folders) >= 1:
             for f in self.folders:
-                dest_name = Path.joinpath(self.base_path, f.parths[-1]) 
+                dest_name = Path.joinpath(self.base_path, f.parts[-1]) 
                 # print(f'monitor: dest: {dest_name}')
                 # print(f'monitor: base: {self.base_path}')
                 if not Path(dest_name).exists():
@@ -199,9 +200,8 @@ class Monitor(Thread):
                 return
             if self.verbose:
                 #pass
-                if not self.monitor_q.empty():
-                    print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
-            time.sleep(1)
+                print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
+            time.sleep(3)
 
     def join(self, **kwargs):
         self.kill = True

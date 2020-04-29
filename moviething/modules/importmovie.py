@@ -1,6 +1,6 @@
 import os
 import shutil
-
+from pathlib import Path
 from moviething.modules.nfoparser import get_xml, get_xml_movie_title
 from moviething.modules.utils import get_video_filelist
 
@@ -27,7 +27,7 @@ def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True
     if verbose:
         print(f'Starting import process: from {import_path} to {base_path}')
     # make destination path
-    dest_path = base_path + '\\' + import_name
+    dest_path = Path.joinpath(base_path, import_name)
 #    try:
 #        os.makedirs(dest_path)
 #    except Exception as e:
@@ -59,9 +59,11 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         print(f'import_process_path: {base_path} {movie_path} {verbose} {dry_run}')
     xml = get_xml(movie_path)
     movie_title = get_xml_movie_title(xml)
-    import_name = movie_path.parts[-1] 
-    if movie_path != import_name:
-        os.rename(src=movie_path, dst=base_path + '/' + movie_title)
+    import_name = movie_path.parts[-1]
+    if movie_title == None:
+        movie_title = import_name
+    if str(movie_path) != str(import_name):
+        os.rename(src=movie_path, dst=Path.joinpath(base_path, movie_title))
 
 
 if __name__ == '__main__':

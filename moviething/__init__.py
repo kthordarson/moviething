@@ -9,6 +9,8 @@ scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  """
 import argparse
+import configparser
+
 from queue import Queue
 #from .moviething.modules.classes import MainThread, Monitor  # , MovieClass
 from moviething.modules.classes import  MainThread, Monitor
@@ -39,16 +41,19 @@ def stop_all_threads(threads):
 
 def main_program():
     args = get_args()
+    config = configparser.ConfigParser()
+    config.read('moviething/settings.ini')
+    base_path = config['moviethingsettings']['path']
+    monitor_path = config['moviethingsettings']['monitor_path']
     # verbose = args.verbose
     # dry_run = args.dryrun
     threads = list()
     monitor_q = Queue()
-    main_thread = MainThread('MainThread', monitor_q, base_path=Path(args.path), verbose=args.verbose, dry_run=args.dryrun)
+    main_thread = MainThread('MainThread', monitor_q, base_path=Path(base_path), verbose=args.verbose, dry_run=args.dryrun)
     threads.append(main_thread)
-    if args.monitor_path is not None:
-        monitor_thread = Monitor('Monitor', monitor_q, monitor_path=Path(args.monitor_path), base_path=Path(args.path),
+    monitor_thread = Monitor('Monitor', monitor_q, monitor_path=Path(monitor_path), base_path=Path(base_path),
                                  verbose=args.verbose, dry_run=args.dryrun)
-        threads.append(monitor_thread)
+    threads.append(monitor_thread)
     for t in threads:
         t.setDaemon = False
         t.start()
@@ -85,33 +90,11 @@ def main_program():
 
 def get_args():
     parser = argparse.ArgumentParser(description="moviething")
-    parser.add_argument("--path", nargs="?", default="d:/movies",
-                        help="Base movie folder", required=True, action="store", )
-    parser.add_argument("--import_path", action="store",
-                        help="Import movie files from folder and move them to Base movie folder")
-    parser.add_argument("--monitor_path", action="store", default=None,
-                        help="Watch this folder for new incoming movies")
     parser.add_argument("--dryrun", action="store_true",
                         help="Dry run - no changes to filesystem")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose output")
-    args = parser.parse_args()
-    if args.path:
-        print(f'Basedir: {args.path}')
-        # basemovie_dir = args.path
-    if args.import_path:
-        print(f'Importing from: {args.import_path}')
-        # import_path = args.import_path
-    else:
-        print(f'Dry run: {args.dryrun}')
-        # dry_run = True
-    #    else:
-    #        print(f'Dry run: {args.dryrun}')
-    # dry_run = False
-    # if args.verbose:
-    #     verbose = True
-    # else:
-    #     verbose = False
+
     return parser.parse_args()
 
 

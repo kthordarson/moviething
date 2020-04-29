@@ -13,8 +13,16 @@ from moviething.modules.stringutils import sanatized_string
 def who_called_func():
     return inspect.stack()[2][3]
 
-
 def can_open_file(file):
+    try:
+        dest = Path(str(file) + '.tmp')
+        Path.rename(file,dest)
+        Path.rename(dest,file)
+        return True
+    except Exception as e:
+        print(f'file in use {e}')
+        return False
+def xcan_open_file(file):
     # check if we can get handle
     print(f'can_open_file: {file}')
     try:
@@ -67,13 +75,8 @@ def get_folders_non_empty(base_path):
         folders = [d for d in base_path.glob('*') if d.is_dir()]
         result = []
         for path in folders:
-            # root_directory = Path(path)
-            # file_object = open(f, 'a', 8)
             if len([file for file in scan_path_open(path, vid_extensions, min_size=min_filesize)]) >= 1:
-                # print(f'get_folders_non_empty: {file}')
                 result.append(path)
-#            if sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) > 1:
-#                result.append(PurePath(root_directory))
     except Exception as e:
         print(f'get_folders: {e}')
         return []
