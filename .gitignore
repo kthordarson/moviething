@@ -1,3 +1,4 @@
+!**/__pycache__/
 .vscode/launch.json
 .vscode/*
 oldstuff/*
@@ -11,6 +12,8 @@ pycallgraph.png
 moviething/__pycache__/*
 moviething/moviething/__pycache__/*
 moviething/modules/__pycache__/*
+moviething/modules/__pycache__/**
+moviething/modules/__pycache__/**/*
 moviething/modules/__pycache__/__init__.cpython-36.pyc
 *.py[cod]
 *$py.class
