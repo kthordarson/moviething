@@ -3,7 +3,7 @@ import subprocess
 import re
 import os
 import sys
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import platform
 from lxml import etree as et
 from pathlib import Path
@@ -30,9 +30,12 @@ def get_ffprobe(filename):
         else:
             cmd=["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", str(filename)]
         out, err =  subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).communicate()
-        return etree_to_dict(et.ElementTree(et.fromstring(out)).getroot())
+        return et.ElementTree(et.fromstring(out)).getroot()
 
 if __name__ == '__main__':
+    # testfile = 'd:/movies_incoming/Alien (1979)/Alien.1979.Directors.Cut.1080p.BluRay.H264.AAC-RARBG.mp4'
+    # ff = get_ffprobe(testfile)
+    # print(type)
     pass
     # d = Path('/mnt/d/movies')
     # testlist = [k for k in list(d.glob('**/*.mkv'))]

@@ -4,7 +4,7 @@ from queue import Queue, Empty
 import time
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 
 from utils import get_folders, get_folders_non_empty, get_video_filelist
 from nfoparser import get_xml_data, get_xml, get_xml_score
@@ -77,7 +77,6 @@ class MainThread(Thread):
     def grab_folder(self, item):
         print(f'q_process: {item}')
         try:
-            # os.rename(src=i.path, dst='d:/moviestest')
             shutil.move(src=item, dst=self.base_path)
             # self.import_from_path(item):
         except Error as e:
@@ -144,10 +143,16 @@ class MainThread(Thread):
         print('dumping movies')
         self.populate_movies()
         for movie in self.movie_list:
-            movie.dump_info()
+            try:
+                movie.dump_info()
+            except Exception as e:
+                print(f'dump_movies: error {e}')
 
     def dump_movie_list(self):
-        _ = [print(f'Title: {movie.get_title()} Year: {movie.get_year()} imdb: {movie.get_imdb_id()} x: {movie.get_xml_score()}') for movie in self.movie_list]
+        try:
+            _ = [print(f'Title: {movie.get_title()} Year: {movie.get_year()} imdb: {movie.get_imdb_id()} x: {movie.get_xml_score()}') for movie in self.movie_list]
+        except Exception as e:
+            print(f'dump_movie_list: error {e}')
 
     def import_from_path(self, import_path):
         if import_check_path(import_path):
@@ -247,7 +252,11 @@ class MovieClass(object):
     
     def dump_info(self):
         for tag in self.movie_data:
-            print(f'{tag} : {self.movie_data[tag]}')
+            try:
+                if tag:
+                    print(f'\t\t{tag} : {self.movie_data[tag]}')
+            except Exception as e:
+                print(f'dump_info: error {e}')
         #pass
 
 if __name__ == '__main__':

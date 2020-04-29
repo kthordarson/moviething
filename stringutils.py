@@ -1,6 +1,5 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from defs import valid_input_string_chars, char_limit, valid_tag_chars
 import unicodedata

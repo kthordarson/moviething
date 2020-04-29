@@ -5,10 +5,8 @@ from pathlib import Path, PurePath
 import inspect
 import psutil
 import sys
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from defs import vid_extensions, min_filesize
-# from .nfoparser import get_xml_movie_title, get_xml
 from stringutils import sanatized_string
 
 # noinspection PyUnusedFunction
@@ -53,7 +51,7 @@ def scan_path_open(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     # checks if file is open
     # print(f'scanpathopen....')
-    for entry in path.glob('*'):  # os.scandir(path):
+    for entry in path.glob('*'):
         if entry.is_dir():
             yield from scan_path_open(entry, extensions, min_size)
         else:

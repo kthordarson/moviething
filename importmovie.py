@@ -2,11 +2,12 @@ import os
 import shutil
 from pathlib import Path
 import sys
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from nfoparser import get_xml, get_xml_movie_title, nfo_process_path
+from lxml import etree as et
+
+from nfoparser import get_xml, get_xml_movie_title, nfo_process_path,get_xml_list, get_nfo_list
 from utils import get_video_filelist
-
+from ffprobe import get_ffprobe
 
 def import_check_path(import_path, verbose=True, dry_run=True):
     if verbose:
@@ -22,6 +23,19 @@ def import_check_path(import_path, verbose=True, dry_run=True):
         if get_video_filelist(import_path) is None:
             return False
         else:
+            if len(get_nfo_list(import_path)) == 0 and len(get_xml_list(import_path)) == 0:
+                # no nfo/xml found, make some
+                print(f'import_check_path: make xml')
+                data = get_ffprobe(get_video_filelist(import_path))
+                # root = et.Element('movie')
+                tree = et.ElementTree(element=data)
+                xml_name = import_path.parts[-1] + '.xml'
+                result_file = Path.joinpath(import_path, xml_name)
+                try:
+                    tree.write(str(result_file))
+                except Exception as e:
+                    print(f'import_check_path: error saving ffprobe xml {e}')
+                
             return True
 
 def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True):
@@ -31,17 +45,10 @@ def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True
         print(f'Starting import process: from {import_path} to {base_path}')
     # make destination path
     dest_path = Path.joinpath(base_path, import_name)
-#    try:
-#        os.makedirs(dest_path)
-#    except Exception as e:
-#        print(f'Could not create {dest_path} {e}')
     # if dry, only copy from import
     if dry_run:
         try:
             shutil.copytree(src=import_path, dst=dest_path)
-            # source_files = os.listdir(import_path)
-            # for source_file in source_files:
-            #    shutil.copyfile(src=source_file, dst=dest_path)
             return dest_path
         except Exception as e:
             print(f'Could not copy from {import_path} to {dest_path} {e}')
@@ -72,7 +79,6 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
     if str(movie_path) != str(import_name):
         target_name = Path.joinpath(base_path, movie_title)
         movie_path.rename(target_name)
-        # os.rename(src=movie_path, dst=Path.joinpath(base_path, movie_title))
 
 
 if __name__ == '__main__':

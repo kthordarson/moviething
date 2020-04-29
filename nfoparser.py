@@ -12,7 +12,6 @@ import time
 
 # from xml.parsers.expat import ExpatError
 import sys
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from lxml import etree as et
 # noinspection PyUnresolvedReferences
@@ -117,7 +116,7 @@ def get_xml(movie_path):
         result_filename = Path.joinpath(movie_path.parts[-1] + '.xml') 
         for f in xml:
             try:
-                os.rename(src=f, dst=f + '.olddata')
+                f.rename(str(f) + '.olddata')
             except Exception as e:
                 print(f'get_xml ERR {e} while renaming old xml')
                 return None
