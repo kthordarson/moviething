@@ -66,8 +66,8 @@ class MainThread(Thread):
             if self.kill:
                 return
             if self.verbose:
-                self.get_status()
-                #pass
+                # self.get_status()
+                pass
             time.sleep(1)
 
     def join(self, **kwargs):
@@ -207,8 +207,8 @@ class Monitor(Thread):
             if self.kill:
                 return
             if self.verbose:
-                #pass
-                print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
+                pass
+                # print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
             time.sleep(3)
 
     def join(self, **kwargs):
@@ -229,23 +229,45 @@ class MovieClass(object):
 
     def get_videofile(self):
         # return str full path of videofile
-        return self.moviefile.name
+        return self.moviefile
 
     def get_video(self):
         # return direntry of movie
         return self.moviefile
 
     def get_title(self):
-        return self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or None
+        if self.movie_data is not None:
+            try:
+                self.movie_title = self.movie_data.get('title')
+            except Exception as e:
+                print(f'MovieClass: {str(self.moviefile)}  - get_title: {e}')
+                return None
+            try:
+                self.movie_title = self.movie_data.get('OriginalTitle')
+            except Exception as e:
+                print(f'MovieClass: {str(self.moviefile)}  - get_title: {e}')
+                return None
+            return self.movie_title  # self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or None
+        else:
+            print(f'MovieClass: {str(self.moviefile)}  - get_title: NO TITLE')
+            return None
 
     def get_year(self):
-        return self.movie_data.get('year') or self.movie_data.get('ProductionYear') or None
+        if self.movie_data is not None:
+            return self.movie_data.get('year') or self.movie_data.get('ProductionYear') or None
+        else:
+            print(f'MovieClass: {str(self.moviefile)}  - get_year: NO YEAR')
+            return None
 
     def get_imdb_id(self):
-        if type(self.movie_data.get('id')) == list:
-            return self.movie_data.get('id')[0]
+        if self.movie_data is not None:
+                if type(self.movie_data.get('id')) == list:
+                    return self.movie_data.get('id')[0]
+                else:
+                    return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
         else:
-            return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
+            print(f'MovieClass: {str(self.moviefile)}  - get_imdb_id: NO ID')
+            return None
 
     def get_xml_score(self):
         return int(self.xml_score)
