@@ -1,8 +1,9 @@
 # grab technical details from vidfiles with ffprobe
 import subprocess
 import re
-import sys
 import os
+import sys
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import platform
 from lxml import etree as et
 from pathlib import Path

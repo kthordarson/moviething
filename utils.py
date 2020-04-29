@@ -4,10 +4,12 @@ import re
 from pathlib import Path, PurePath
 import inspect
 import psutil
+import sys
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from moviething.modules.defs import vid_extensions, min_filesize
-# from moviething.modules.nfoparser import get_xml_movie_title, get_xml
-from moviething.modules.stringutils import sanatized_string
+from defs import vid_extensions, min_filesize
+# from .nfoparser import get_xml_movie_title, get_xml
+from stringutils import sanatized_string
 
 # noinspection PyUnusedFunction
 def who_called_func():

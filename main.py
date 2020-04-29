@@ -13,7 +13,7 @@ import configparser
 
 from queue import Queue
 #from .moviething.modules.classes import MainThread, Monitor  # , MovieClass
-from moviething.modules.classes import  MainThread, Monitor
+from classes import  MainThread, Monitor
 from pathlib import Path
 
 # from pycallgraph import PyCallGraph
@@ -42,7 +42,7 @@ def stop_all_threads(threads):
 def main_program():
     args = get_args()
     config = configparser.ConfigParser()
-    config.read('moviething/settings.ini')
+    config.read('settings.ini')
     base_path = config['moviethingsettings']['path']
     monitor_path = config['moviethingsettings']['monitor_path']
     # verbose = args.verbose
@@ -98,5 +98,5 @@ def get_args():
     return parser.parse_args()
 
 
-# if __name__ == '__main__':
-#     main_program()
+if __name__ == '__main__':
+    main_program()

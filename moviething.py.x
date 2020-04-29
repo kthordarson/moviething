@@ -8,7 +8,7 @@ extract movie info from nfo/xml files
 scrape missing info from imdb/other sources
 in case of multiple nfo/xml merge into one
  """
-from moviething import main_program
+from modules.main import main_program
 
 if __name__ == '__main__':
     main_program()

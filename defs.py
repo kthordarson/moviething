@@ -1,6 +1,9 @@
 # global definitions
 import string
 import re
+import os
+import sys
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
 
@@ -71,4 +74,4 @@ unwanted_files = dict(
 )
 
 if __name__ == '__main__':
-    pass
+    print('defs')

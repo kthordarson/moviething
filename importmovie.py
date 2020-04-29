@@ -1,13 +1,16 @@
 import os
 import shutil
 from pathlib import Path
-from moviething.modules.nfoparser import get_xml, get_xml_movie_title
-from moviething.modules.utils import get_video_filelist
+import sys
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from nfoparser import get_xml, get_xml_movie_title, nfo_process_path
+from utils import get_video_filelist
 
 
 def import_check_path(import_path, verbose=True, dry_run=True):
     if verbose:
-        print(f'Checking path {import_path} {dry_run}')
+        print(f'Checking path {import_path} from {dry_run}')
     if not import_path.exists():
         if verbose:
             print(f'Import path: {import_path} not found')
@@ -58,12 +61,18 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
     if verbose:
         print(f'import_process_path: {base_path} {movie_path} {verbose} {dry_run}')
     xml = get_xml(movie_path)
+    if xml is None:
+        xml = nfo_process_path(movie_path)
+        # xml = get_xml(movie_path)
+        # get_nfo(movie_path)
     movie_title = get_xml_movie_title(xml)
     import_name = movie_path.parts[-1]
     if movie_title == None:
         movie_title = import_name
     if str(movie_path) != str(import_name):
-        os.rename(src=movie_path, dst=Path.joinpath(base_path, movie_title))
+        target_name = Path.joinpath(base_path, movie_title)
+        movie_path.rename(target_name)
+        # os.rename(src=movie_path, dst=Path.joinpath(base_path, movie_title))
 
 
 if __name__ == '__main__':

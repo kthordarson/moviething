@@ -2,11 +2,14 @@
 from threading import Thread, active_count
 from queue import Queue, Empty
 import time
-from moviething.modules.utils import get_folders, get_folders_non_empty, get_video_filelist
-from moviething.modules.nfoparser import get_xml_data, get_xml, get_xml_score
-from moviething.modules.importmovie import import_movie, import_check_path, import_process_path
-from moviething.modules.scrapers import scrape_movie
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from utils import get_folders, get_folders_non_empty, get_video_filelist
+from nfoparser import get_xml_data, get_xml, get_xml_score
+from importmovie import import_movie, import_check_path, import_process_path
+from scrapers import scrape_movie
 import shutil
 from shutil import Error
 from pathlib import Path

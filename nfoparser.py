@@ -11,16 +11,19 @@ import time
 # import unicodedata
 
 # from xml.parsers.expat import ExpatError
+import sys
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from lxml import etree as et
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
 
-from moviething.modules.defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
-from moviething.modules.etree import etree_to_dict
-from moviething.modules.stringutils import sanatized_string
-from moviething.modules.utils import who_called_func
+from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
+from etree import etree_to_dict
+from stringutils import sanatized_string
+from utils import who_called_func
 from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
+from scrapers import imdb_scrape_id, parse_imdb_data
 # from stringutils import sanatized_string
 
 # from classes import *
@@ -87,7 +90,7 @@ def get_xml_list(movie_path):
 def get_nfo_list(movie_path):
     # return a list of valid / parsable nfo files from movie_path
     # print(type(movie_path))
-    nfo_list = movie_path.glob('*.xml')  #  glob.glob(movie_path + '/*.nfo', recursive=False)
+    nfo_list = movie_path.glob('*.nfo')  #  glob.glob(movie_path + '/*.nfo', recursive=False)
     result = [nfo for nfo in nfo_list if is_valid_nfo(nfo)]
     return result
 
@@ -157,6 +160,16 @@ def get_xml_movie_title(xml_file):
         print(f'get_xml_title: {xml_file} error {e}')
         return None
 
+def get_xml_imdb_link(xml_file):
+    # extract valid movie title and year from xml_file
+    # movie_title = None
+    # title = None
+    try:
+        root = et.parse(str(xml_file)).getroot()
+        return root.find('imdb_link').text
+    except Exception as e:  # as e:
+        print(f'get_xml_imdb_link: {xml_file} error {e}')
+        return None
 
 def is_valid_nfo(file):
     # check if given nfo file contains extractable info, return False if not
@@ -218,15 +231,46 @@ def nfo_to_xml(nfo):
         a = et.SubElement(root, tag[0])
         a.text = tag[1]
     # data = et.tostring(tree.getroot(), encoding='utf-8', method='xml')
+    try:
+        imdb_link = [imdb_regex.search(tag[1]).group(2) for tag in tags if imdb_regex.search(tag[1]) is not None]
+    except Exception:
+        pass
+    if imdb_link is not None:
+        # scrape imdb link
+        imdbdata = imdb_scrape_id(imdb_link[0])
+        for tag in imdbdata:
+            a = et.SubElement(root, tag)
+            a.text = imdbdata[tag]
+       # [et.SubElement(root2, k) for k in imdbdata] # [print(f'k: {k} v:{imdbdata[k]}') for k in imdbdata]
+        # imdb_result = parse_imdb_data(imdbdata, imdb_link[0])
     data = et.tostring(tree.getroot(), method='xml')
     dataout = minidom.parseString(data)
     pretty_data = dataout.toprettyxml(indent=' ')
-    result_file = Path.joinpath(nfo, '.xml')   #  nfo + '.xml'
-    if not Path(result_file).exists():
-        # with open(result_file, mode='w', encoding='utf-8') as f:
+    # resname = nfo.parts[-2]+'.xml'
+    result_file = Path.joinpath(nfo.parent, nfo.parts[-2]+'.xml')   #  nfo + '.xml'
+    if Path(result_file).exists():
+        #rename
+        target = Path.joinpath(nfo.parent, nfo.parts[-2]+'.olddata')
+        try:
+            result_file.rename(target)
+        except Exception as e:
+            print(f'nfo_to_xml: rename error {e}')
+    try:
         with open(result_file, mode='w') as f:
             f.write(pretty_data)
+        # rename old nfo
+        target = Path.joinpath(nfo.parent, nfo.parts[-2]+'.nfo.olddata')
+        nfo.rename(target)
+    except Exception as e:
+        print(f'nfo_to_xml: save error {e}')
 
+def nfo_process_path(path):
+    # convert all nfo's in path to one combined xml
+    nfo_list = get_nfo_list(path)
+    # [print(get_tags_from_nfo(file)) for file in nfo_list]
+    # print(nfo_list)
+    [nfo_to_xml(file) for file in nfo_list]
+    return get_xml(path)
 
 def test_get_xml_data(xmlfile):
     data = get_xml_data(xmlfile)
@@ -234,7 +278,7 @@ def test_get_xml_data(xmlfile):
 
 
 def test_nfo_pp(movie_path):
-    nfolist = get_nfo_list(movie_path)
+    nfolist = get_xml_list(movie_path)
     nfo_to_convert = []
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -250,7 +294,7 @@ def test_nfo_pp(movie_path):
 # noinspection PySameParameterValue
 def test_nfo_tt(movie_path):
     # fastest method !!!!
-    nfolist = get_nfo_list(movie_path)
+    nfolist = get_xml_list(movie_path)
     nfo_to_convert = []
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -264,7 +308,7 @@ def test_nfo_tt(movie_path):
 
 
 def test_nfo(movie_path):
-    nfolist = get_nfo_list(movie_path)
+    nfolist = get_xml_list(movie_path)
     # nfo_to_convert = []
     # for nfo in nfolist:
     #     if is_valid_nfo(nfo):
@@ -287,7 +331,12 @@ def test_xml_combine():
 
 
 if __name__ == '__main__':
-    start = time.perf_counter()
+    print('nfoparser')
+    nfo_list = get_nfo_list(Path('d:/movies_incoming/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/'))
+    # [print(get_tags_from_nfo(file)) for file in nfo_list]
+    print(nfo_list)
+    [nfo_to_xml(file) for file in nfo_list]
+    #start = time.perf_counter()
     # test_nfo('d:/movies/test-abc')
     # finish = time.perf_counter()
     # print(f'Finished in {round(finish-start, 2)} second(s)')
@@ -296,8 +345,8 @@ if __name__ == '__main__':
     # finish = time.perf_counter()
     # print(f'Finished pp in {round(finish-start, 2)} second(s)')
     # start = time.perf_counter()
-    print(f'Starting nfo_parser')
-    test_nfo_tt('d:/movies/test-abc')
-    finish = time.perf_counter()
-    print(f'Finished pp in {round(finish - start, 2)} second(s)')
+    # print(f'Starting nfo_parser')
+    # test_nfo_tt('d:/movies/test-abc')
+    # finish = time.perf_counter()
+    # print(f'Finished pp in {round(finish - start, 2)} second(s)')
     pass
