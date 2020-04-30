@@ -9,7 +9,7 @@ import sys
 from utils import get_folders, get_folders_non_empty, get_video_filelist
 from nfoparser import get_xml_data, get_xml, get_xml_score
 from importmovie import import_movie, import_check_path, import_process_path
-from scrapers import scrape_movie
+from scrapers import scrape_movie, scrape_by_id
 import shutil
 from shutil import Error
 from pathlib import Path
@@ -101,7 +101,7 @@ class MainThread(Thread):
         self.update_xml_list()
         # self.scrape_threads = list()
         if self.verbose:
-            print(f'populate_movies from {self.base_path} {len(self.folder_list)} {len(self.xml_list)}')
+            print(f'populate_movies from {self.base_path} folders: {len(self.folder_list)} xml: {len(self.xml_list)}')
         # start fresh
         self.movie_list = [MovieClass(movie_data=get_xml_data(file), movie_path=file.parent, movie_xml=file) for file in
                            self.xml_list]
@@ -140,7 +140,7 @@ class MainThread(Thread):
 
     def dump_movies(self):
         # dump movie list
-        print('dumping movies')
+        # print('dumping movies')
         self.populate_movies()
         for movie in self.movie_list:
             try:
@@ -150,7 +150,7 @@ class MainThread(Thread):
 
     def dump_movie_list(self):
         try:
-            _ = [print(f'Title: {movie.get_title()} Year: {movie.get_year()} imdb: {movie.get_imdb_id()} x: {movie.get_xml_score()}') for movie in self.movie_list]
+            _ = [print(f'Title: {movie.movie_title} Year: {movie.movie_year} imdb: {movie.imdb_id} x: {movie.xml_score}') for movie in self.movie_list]
         except Exception as e:
             print(f'dump_movie_list: error {e}')
 
@@ -174,6 +174,14 @@ class MainThread(Thread):
         else:
             if self.verbose:
                 print(f'Nothing to import from path: {import_path}')
+    
+    def scrape(self, imdbid):
+        # check if we have imdbid in our list, scrape 
+        # tt0066921
+        print(f'Manual scrape {imdbid}')
+        movie_path = [movie.moviepath for movie in self.movie_list if movie.imdb_id == imdbid]
+        if len(movie_path) >= 1:
+            scrape_by_id(imdbid, movie_path[0])
 
 class Monitor(Thread):
     def __init__(self, name, monitor_q=Queue(), monitor_path='', base_path='', verbose=True, dry_run=True):
@@ -201,8 +209,6 @@ class Monitor(Thread):
                     # todo check if we can move files before putting into q
                     print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
                     self.monitor_q.put(('f',f))
-                else:
-                    print(f'monitor: {dest_name} exists')
                         
             if self.kill:
                 return
@@ -217,11 +223,27 @@ class Monitor(Thread):
 
 class MovieClass(object):
     def __init__(self, movie_data, movie_path, movie_xml):
-        self.movie_data = movie_data
+        # self.movie_data = movie_data
         self.moviepath = movie_path 
         self.moviefile = get_video_filelist(self.moviepath)
         self.movie_xml = movie_xml
         self.xml_score = get_xml_score(self.movie_xml)
+        if movie_data is not None:
+            self.movie_data = movie_data
+            self.do_update()
+        else:
+            self.movie_data = None
+            self.movie_title = None
+            self.movie_year = None
+            self.imdb_id = None
+
+    def do_update(self):
+        # update fields from movie_data
+        # print('doing update')
+        self.movie_title = self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or self.movie_data.get('originaltitle')
+        self.movie_year = self.movie_data.get('year') or self.movie_data.get('ProductionYear')  or self.movie_data.get('productionyear')
+        self.imdb_id = self.movie_data.get('imdb') or self.movie_data.get('id') or self.movie_data.get('IMDBiD') or self.movie_data.get('IMdbId')
+
 
     def get_path(self):
         # return str path to movie
@@ -234,44 +256,7 @@ class MovieClass(object):
     def get_video(self):
         # return direntry of movie
         return self.moviefile
-
-    def get_title(self):
-        if self.movie_data is not None:
-            try:
-                self.movie_title = self.movie_data.get('title')
-            except Exception as e:
-                print(f'MovieClass: {str(self.moviefile)}  - get_title: {e}')
-                return None
-            try:
-                self.movie_title = self.movie_data.get('OriginalTitle')
-            except Exception as e:
-                print(f'MovieClass: {str(self.moviefile)}  - get_title: {e}')
-                return None
-            return self.movie_title  # self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or None
-        else:
-            print(f'MovieClass: {str(self.moviefile)}  - get_title: NO TITLE')
-            return None
-
-    def get_year(self):
-        if self.movie_data is not None:
-            return self.movie_data.get('year') or self.movie_data.get('ProductionYear') or None
-        else:
-            print(f'MovieClass: {str(self.moviefile)}  - get_year: NO YEAR')
-            return None
-
-    def get_imdb_id(self):
-        if self.movie_data is not None:
-                if type(self.movie_data.get('id')) == list:
-                    return self.movie_data.get('id')[0]
-                else:
-                    return self.movie_data.get('id') or self.movie_data.get('IMDbId') or None
-        else:
-            print(f'MovieClass: {str(self.moviefile)}  - get_imdb_id: NO ID')
-            return None
-
-    def get_xml_score(self):
-        return int(self.xml_score)
-    
+   
     def dump_info(self):
         for tag in self.movie_data:
             try:

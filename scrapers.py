@@ -11,6 +11,7 @@ import os
 from requests import get
 import time
 import random
+from pathlib import Path
 
 nonBreakSpace = u'\xa0'
 strip_chars = ' \n'
@@ -68,15 +69,34 @@ def parse_imdb_data(soup, id):
     data['fulldate'] = fulldate
     return data
 
+def scrape_by_id(imdbid, dest):
+    # scrape id and save to dest
+    data_input = imdb_scrape_id(imdbid)
+    root = et.Element('movie')
+    tree = et.ElementTree(element=root)
+    root = tree.getroot()
+    for tag in list(data_input):
+        a = et.SubElement(root, tag)
+        a.text = data_input[tag]
+    # data = et.tostring(tree.getroot(), encoding='utf-8', method='xml')
+    data = et.tostring(tree.getroot(), method='xml')
+    dataout = minidom.parseString(data)
+    pretty_data = dataout.toprettyxml(indent=' ')
+    result_file = Path.joinpath(dest, data_input['title_year'] + '.xml') #  'testingstuff/' + data_input['title_year'] + '.xml'
+    # result_file = 'c:/Users/kthor/Documents/development/moviething/testingstuff/taxi_ff.html.xml'
+    with open(result_file, mode='w') as f:
+        f.write(pretty_data)
+    print(f'scraper: Saved {result_file}')
+
 def scrape_movie(movie):
     new_data = None
     # scrape movie info...
-    sltime = random.randint(2,9)
-    print(f'scrape_movie: Start scraping {movie.moviefile} imdb_id {movie.get_imdb_id()} sltime: {sltime}')
-    time.sleep(sltime) # sleep for imdb.... maybe pointless ?
+    # sltime = random.randint(2,9)
+    print(f'scrape_movie: Start scraping {movie.moviefile} imdb_id {movie.get_imdb_id()}')
+    # time.sleep(sltime) # sleep for imdb.... maybe pointless ?
     new_data = imdb_scrape_id(movie.get_imdb_id())
     if new_data is not None:
-        print(f'scrape_movie: Done scraping {movie.moviefile} imdb_id {movie.get_imdb_id()} sltime: {sltime}')
+        print(f'scrape_movie: Done scraping {movie.moviefile} imdb_id {movie.get_imdb_id()}')
         return new_data
     else:
         print(f'scrape_movie: scrape failed!')

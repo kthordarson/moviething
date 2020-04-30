@@ -82,6 +82,8 @@ def main_program():
                 main_thread.set_base_path(cmd[8:])
             if cmd[:4] == 'list':
                 main_thread.dump_movie_list()
+            if cmd[:6] == 'scrape':
+                main_thread.scrape(cmd[7:16])
         except KeyboardInterrupt:
             stop_all_threads(threads)
         except Exception as e:

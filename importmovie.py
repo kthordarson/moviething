@@ -10,8 +10,8 @@ from utils import get_video_filelist
 from ffprobe import get_ffprobe
 
 def import_check_path(import_path, verbose=True, dry_run=True):
-    if verbose:
-        print(f'Checking path {import_path} from {dry_run}')
+#    if verbose:
+#        print(f'Checking path {import_path}')
     if not import_path.exists():
         if verbose:
             print(f'Import path: {import_path} not found')
@@ -66,7 +66,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
     # clean unwanted files/samples
     # rename path and video file if needed
     if verbose:
-        print(f'import_process_path: {base_path} {movie_path} {verbose} {dry_run}')
+        print(f'import_process_path: {base_path} {movie_path}')
     xml = get_xml(movie_path)
     if xml is None:
         xml = nfo_process_path(movie_path)

@@ -155,9 +155,14 @@ def get_xml_movie_title(xml_file):
         movie_year = root.find('year').text
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'
         return title
-    except Exception as e:  # as e:
-        print(f'get_xml_title: {xml_file} error {e}')
+    except TypeError as e:  # as e:
+        print(f'get_xml_movie_title: {xml_file} error {e}')
         return None
+    except AttributeError as e:  # as e:
+        print(f'get_xml_movie_title: {xml_file} error {e}')
+        return None
+    except:
+        pass
 
 def get_xml_imdb_link(xml_file):
     # extract valid movie title and year from xml_file
@@ -233,7 +238,7 @@ def nfo_to_xml(nfo):
     try:
         imdb_link = [imdb_regex.search(tag[1]).group(2) for tag in tags if imdb_regex.search(tag[1]) is not None]
     except Exception:
-        pass
+        imdb_link = None
     if imdb_link is not None:
         # scrape imdb link
         imdbdata = imdb_scrape_id(imdb_link[0])
