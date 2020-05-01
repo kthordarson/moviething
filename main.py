@@ -12,9 +12,10 @@ import argparse
 import configparser
 
 from queue import Queue
-#from .moviething.modules.classes import MainThread, Monitor  # , MovieClass
-from classes import  MainThread, Monitor
+# from .moviething.modules.classes import MainThread, Monitor  # , MovieClass
+from classes import MainThread, Monitor
 from pathlib import Path
+
 
 # from pycallgraph import PyCallGraph
 # from pycallgraph.output import GraphvizOutput
@@ -45,10 +46,11 @@ def main_program():
     # dry_run = args.dryrun
     threads = list()
     monitor_q = Queue()
-    main_thread = MainThread('MainThread', monitor_q, base_path=Path(base_path), verbose=args.verbose, dry_run=args.dryrun)
+    main_thread = MainThread('MainThread', monitor_q, base_path=Path(base_path), verbose=args.verbose,
+                             dry_run=args.dryrun)
     threads.append(main_thread)
     monitor_thread = Monitor('Monitor', monitor_q, monitor_path=Path(monitor_path), base_path=Path(base_path),
-                                 verbose=args.verbose, dry_run=args.dryrun)
+                             verbose=args.verbose, dry_run=args.dryrun)
     threads.append(monitor_thread)
     for t in threads:
         t.setDaemon = False

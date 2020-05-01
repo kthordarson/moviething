@@ -8,7 +8,7 @@ import sys
 
 from utils import get_folders, get_folders_non_empty, get_video_filelist
 from nfoparser import get_xml_data, get_xml, get_xml_score, check_xml
-from importmovie import import_movie, import_check_path, import_process_path
+from importmovie import import_movie, import_check_path, import_process_path, import_process_files
 from scraper_imdb import scrape_movie, scrape_by_id
 import shutil
 from shutil import Error
@@ -158,6 +158,8 @@ class MainThread(Thread):
                 if imported_movie_path is not None:
                     print(f'Import successful to {imported_movie_path}')
                     import_process_path(self.base_path, imported_movie_path, self.verbose, self.dry_run)
+                    import_process_files(self.base_path, imported_movie_path, self.verbose, self.dry_run)
+                    self.update()
                 else:
                     print(f'Import error')
         else:

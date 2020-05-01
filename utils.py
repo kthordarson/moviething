@@ -9,19 +9,23 @@ import sys
 from defs import vid_extensions, min_filesize
 from stringutils import sanatized_string
 
+
 # noinspection PyUnusedFunction
 def who_called_func():
     return inspect.stack()[2][3]
 
+
 def can_open_file(file):
     try:
         dest = Path(str(file) + '.tmp')
-        Path.rename(file,dest)
-        Path.rename(dest,file)
+        Path.rename(file, dest)
+        Path.rename(dest, file)
         return True
     except Exception as e:
         print(f'file in use {e}')
         return False
+
+
 def xcan_open_file(file):
     # check if we can get handle
     print(f'can_open_file: {file}')
@@ -37,7 +41,8 @@ def xcan_open_file(file):
     except Exception as e:
         print(f'scan_path: EXCEPTION {e} on {file}')
         return False
-    
+
+
 def scan_path(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
     for entry in path.glob('*'):
@@ -46,6 +51,7 @@ def scan_path(path, extensions, min_size=0):
         else:
             if entry.suffix in extensions and entry.stat().st_size > min_size:
                 yield entry
+
 
 def scan_path_open(path, extensions, min_size=0):
     # scan given path for movies with valid extensions and larger than min_size
@@ -98,7 +104,6 @@ def get_video_filelist(movie_path, verbose=True, dry_run=True):
         if verbose:
             print(f'No videos in {movie_path}')
         return None
-
 
 
 if __name__ == '__main__':

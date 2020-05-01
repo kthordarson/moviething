@@ -32,4 +32,5 @@ class Tmdb_scraper(object):
         
 if __name__ == '__main__':
     t = Tmdb_scraper()
-    print(t.request('tt0152930'))
+    foo = t.request('tt0152930')
+    print(foo)

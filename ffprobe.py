@@ -9,28 +9,33 @@ from lxml import etree as et
 from pathlib import Path
 from etree import etree_to_dict
 
+
 class FFProbe():
     def __init__(self, filename):
         self.filename = filename
 
     def parse(self):
         if str(platform.system() == 'Windows'):
-            cmd=["ffprobe", "-show_streams",'-print_format', 'xml','-show_format','-pretty','-v', 'quiet', self.filename]
+            cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-show_format', '-pretty', '-v', 'quiet',
+                   self.filename]
         else:
-            cmd=["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", self.filename]
-        out, err =  subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).communicate()
+            cmd = ["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", self.filename]
+        out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         # print(f'o {len(out)}')
         # print(f'e {len(err)}')
         root = et.ElementTree(et.fromstring(out)).getroot()
         # root = tree.getroot()
 
+
 def get_ffprobe(filename):
-        if str(platform.system() == 'Windows'):
-            cmd=["ffprobe", "-show_streams",'-print_format', 'xml','-show_format','-pretty','-v', 'quiet', str(filename)]
-        else:
-            cmd=["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", str(filename)]
-        out, err =  subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE).communicate()
-        return et.ElementTree(et.fromstring(out)).getroot()
+    if str(platform.system() == 'Windows'):
+        cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-show_format', '-pretty', '-v', 'quiet',
+               str(filename)]
+    else:
+        cmd = ["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", str(filename)]
+    out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+    return et.ElementTree(et.fromstring(out)).getroot()
+
 
 if __name__ == '__main__':
     # testfile = 'd:/movies_incoming/Alien (1979)/Alien.1979.Directors.Cut.1080p.BluRay.H264.AAC-RARBG.mp4'

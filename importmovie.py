@@ -5,13 +5,14 @@ import sys
 
 from lxml import etree as et
 
-from nfoparser import get_xml, get_xml_movie_title, nfo_process_path,get_xml_list, get_nfo_list
+from nfoparser import get_xml, get_xml_movie_title, nfo_process_path, get_xml_list, get_nfo_list
 from utils import get_video_filelist
 from ffprobe import get_ffprobe
 
+
 def import_check_path(import_path, verbose=True, dry_run=True):
-#    if verbose:
-#        print(f'Checking path {import_path}')
+    #    if verbose:
+    #        print(f'Checking path {import_path}')
     if not import_path.exists():
         if verbose:
             print(f'Import path: {import_path} not found')
@@ -35,8 +36,9 @@ def import_check_path(import_path, verbose=True, dry_run=True):
                     tree.write(str(result_file))
                 except Exception as e:
                     print(f'import_check_path: error saving ffprobe xml {e}')
-                
+
             return True
+
 
 def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True):
     # import_path must only contain one movie
@@ -61,6 +63,7 @@ def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True
             print(f'Could not move from {import_path} to {dest_path} {e}')
             return None
 
+
 def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
     # scan imported path for nfo/xml, convert nfo to xml if needed.
     # clean unwanted files/samples
@@ -81,5 +84,33 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         movie_path.rename(target_name)
 
 
+def import_process_files(base_path, imported_movie_path, verbose=True, dry_run=True):
+    # clean unwanted files/samples
+    # rename video file if needed
+    if verbose:
+        print(f'import_process_path: {base_path} {imported_movie_path}')
+    xml = get_xml(imported_movie_path)
+    movie_title = get_xml_movie_title(xml)
+    if movie_title is not None:
+        # todo check and do stuff
+        # print(f'import_process_files: title: {movie_title} in path: {imported_movie_path}')
+        vidfile = Path(get_video_filelist(imported_movie_path).parts[-1])
+        _vidfile = Path(get_video_filelist(imported_movie_path))
+        vid_ext = vidfile.suffix
+        if movie_title + vid_ext != str(vidfile):
+            target = Path.joinpath(p, Path(movie_title + vid_ext))
+            try:
+                _vidfile.rename(target)
+                print(f'import_process_path: renamed {str(_vidfile)} to {str(target)}')
+            except Exception as e:
+                print(f'import_process_files: rename error {e}')
+
+        # v.suffix
+    else:
+        print(f'import_process_files: error in get movie_title path: {imported_movie_path}')
+
+
 if __name__ == '__main__':
     pass
+
+# d:/movies/A Clockwork Orange (1971)/
