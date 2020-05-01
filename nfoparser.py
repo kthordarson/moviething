@@ -17,7 +17,7 @@ from lxml import etree as et
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
 
-from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars
+from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars, xml_type_list
 from etree import etree_to_dict
 from stringutils import sanatized_string
 from utils import who_called_func
@@ -66,15 +66,24 @@ def get_xml_score(xml_file):
 def is_valid_xml(xml_file):
     # print(type(file))
     try:
-        data = et.parse(str(xml_file)).getroot()
-        # score = get_xml_score(file)
-        tag_list = [tag.tag for tag in data]
-        # print(f'is_valid_xml: caller: {who_called_func()} {file} {score}')
-        if len(tag_list) >= 1:
+        data_root = et.parse(str(xml_file)).getroot()
+        data = etree_to_dict(data_root)
+        if data_root.tag not in xml_type_list:
+            print(f'is_valid_xml: Invalid XML {xml_file} {e}')
+            return False
+        else:
             return True
     except Exception as e:
         print(f'is_valid_xml: Invalid XML {xml_file} {e}')
         return False
+
+def check_xml(movie_path):
+    xml_list = movie_path.glob('*.xml')
+    for xml_file in xml_list:
+        data_root = et.parse(str(xml_file)).getroot()
+        if data_root.tag == 'Title':
+            print(f'check_xml: need to convert {str(xml_file)}')
+    pass
 
 
 # noinspection PySameParameterValue

@@ -19,18 +19,23 @@ replace_break = '\n'
 title_year_regex = re.compile(r'(^.+)(\(\d{4}\).?)$')
 base_url = 'http://www.imdb.com/title/'
 
+headers_xml = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en",
+}
 
-def imdb_scrape_id(id):
+headers = {
+    "Accept-Language" : "en-US,en;q=0.5",
+    "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0",
+}
+
+def imdb_scrape_id(id, debug=False):
     # id is string with valid imdb id format: tt0000000
     # returns dict with movie info
-    headers = {
-        "Accept-Language" : "en-US,en;q=0.5",
-        "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0",
-    }
     # data = dict()
     url = base_url + id
     try:
-        page = get(url,headers=headers)
+        page = get(url,headers=headers_xml)
     except Exception as e:
         print(f'imdb_scrape: err in get {e}')
         return None
@@ -42,6 +47,8 @@ def imdb_scrape_id(id):
     # tree = parse(base_url+id)
     # print(tree)
     try:
+        if debug:
+            return soup
         data = parse_imdb_data(soup, id)
         return data
     except Exception as e:
@@ -67,6 +74,7 @@ def parse_imdb_data(soup, id):
     data['duration'] = duration
     data['genre'] = genre
     data['fulldate'] = fulldate
+    data['plotsummary'] = soup.find('div', class_ = 'summary_text').text.strip()
     return data
 
 def scrape_by_id(imdbid, dest):
@@ -105,12 +113,17 @@ def scrape_movie(movie):
     return new_data
 
 def imdb_debug(id):
-    testfile = 'c:/Users/kthor/Documents/development/moviething/testingstuff/taxi_ff.html'
+    testfile = 'c:/Users/kthor/Documents/development/moviethingtesting/data/taxi_ff.html'
     with open(testfile, 'r') as f:
         testdata = f.read()
     soup = BeautifulSoup(testdata, 'html.parser')
     data = parse_imdb_data(soup, id)
     return data
+
+def dump_imdb_soup(id, dumpfile):
+    dump = imdb_scrape_id(id, debug=True)
+    with open(dumpfile, 'wb') as f:
+        f.write(dump.encode('utf-8'))
 
 def test_imdb_save(data_input):
     root = et.Element('movie')
@@ -131,5 +144,15 @@ def test_imdb_save(data_input):
 
 if __name__ == '__main__':
     # res = imdb_scrape_id('tt0152930')
-    res = imdb_debug('tt0152930')
-    test_imdb_save(res)
+    # res = imdb_debug('tt0152930')
+    #test_imdb_save(res)
+    dumpfile = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
+    dumpfilexml = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
+    dump_imdb_soup('tt0152930', dumpfile)
+
+# soup2 = BeautifulSoup(testdata2, 'xml')
+# jsondata = soup2.find('script',type="application/ld+json" )
+# with open(testfile2, 'r', encoding='utf-8') as f:
+ #...:     testdata2 = f.read()
+# soup2 = BeautifulSoup(testdata2, 'xml')
+# json.loads(soup2.find('script', type='application/ld+json').text.replace('\n',''))

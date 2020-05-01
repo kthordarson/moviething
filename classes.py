@@ -7,7 +7,7 @@ import sys
 
 
 from utils import get_folders, get_folders_non_empty, get_video_filelist
-from nfoparser import get_xml_data, get_xml, get_xml_score
+from nfoparser import get_xml_data, get_xml, get_xml_score, check_xml
 from importmovie import import_movie, import_check_path, import_process_path
 from scrapers import scrape_movie, scrape_by_id
 import shutil
@@ -31,12 +31,9 @@ class MainThread(Thread):
     def run(self):
         if self.verbose:
             print(f'MainThread: {self.name} starting bp: {self.base_path}')
-        if self.folder_list is None:
-            self.folder_list = get_folders(self.base_path)
-        if self.verbose:
-            print(f'First scan {len(self.folder_list)}')
+        self.folder_list = get_folders(self.base_path)
         if self.folder_list is not None:
-            self.populate_movies()
+            self.update()
         while True:
             try:
                 # [0] f: new movie
@@ -74,16 +71,6 @@ class MainThread(Thread):
         self.kill = True
         super().join()
 
-    def grab_folder(self, item):
-        print(f'q_process: {item}')
-        try:
-            shutil.move(src=item, dst=self.base_path)
-            # self.import_from_path(item):
-        except Error as e:
-            print(f'grab_folder: {e}')
-        except Exception as e:
-            print(f'grab_folder: EXCEPTION {e}')
-            # exit(-1)
     def set_base_path(self, base_path):
         if base_path.exists():
             self.base_path = base_path
@@ -98,7 +85,7 @@ class MainThread(Thread):
     def populate_movies(self):
         # make the movie list from our movie folders and xml's found within
         # get new xml's
-        self.update_xml_list()
+        # self.update_xml_list()
         # self.scrape_threads = list()
         if self.verbose:
             print(f'populate_movies from {self.base_path} folders: {len(self.folder_list)} xml: {len(self.xml_list)}')
@@ -110,6 +97,8 @@ class MainThread(Thread):
 
     def update_xml_list(self):
         # refresh xml list
+        # todo check/repair/convert xml if needed.... ?
+        [check_xml(movie_path) for movie_path in self.folder_list]
         self.xml_list = [get_xml(movie_path) for movie_path in self.folder_list if get_xml(movie_path) is not None]
 
     def get_status(self):
@@ -141,7 +130,7 @@ class MainThread(Thread):
     def dump_movies(self):
         # dump movie list
         # print('dumping movies')
-        self.populate_movies()
+        # self.populate_movies()
         for movie in self.movie_list:
             try:
                 movie.dump_info()
