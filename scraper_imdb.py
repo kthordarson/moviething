@@ -143,12 +143,13 @@ def test_imdb_save(data_input):
     print(f'scraper: Saved {result_file}')
 
 if __name__ == '__main__':
+    pass
     # res = imdb_scrape_id('tt0152930')
     # res = imdb_debug('tt0152930')
     #test_imdb_save(res)
-    dumpfile = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
-    dumpfilexml = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
-    dump_imdb_soup('tt0152930', dumpfile)
+    # dumpfile = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
+    # dumpfilexml = 'c:/Users/kthor/Documents/development/moviethingtesting/imdbsoup1.dat'
+    # dump_imdb_soup('tt0152930', dumpfile)
 
 # soup2 = BeautifulSoup(testdata2, 'xml')
 # jsondata = soup2.find('script',type="application/ld+json" )

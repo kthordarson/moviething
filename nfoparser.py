@@ -22,7 +22,7 @@ from etree import etree_to_dict
 from stringutils import sanatized_string
 from utils import who_called_func
 from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
-from scrapers import imdb_scrape_id, parse_imdb_data
+from scraper_imdb import imdb_scrape_id, parse_imdb_data
 # from stringutils import sanatized_string
 
 # from classes import *
@@ -250,7 +250,7 @@ def nfo_to_xml(nfo):
         imdb_link = None
     if imdb_link is not None:
         # scrape imdb link
-        imdbdata = imdb_scrape_id(imdb_link[0])
+        imdbdata = None  # imdb_scrape_id(imdb_link[0])
         for tag in imdbdata:
             a = et.SubElement(root, tag)
             a.text = imdbdata[tag]

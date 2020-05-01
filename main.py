@@ -41,10 +41,6 @@ def stop_all_threads(threads):
 
 def main_program():
     args = get_args()
-    config = configparser.ConfigParser()
-    config.read('settings.ini')
-    base_path = config['moviethingsettings']['path']
-    monitor_path = config['moviethingsettings']['monitor_path']
     # verbose = args.verbose
     # dry_run = args.dryrun
     threads = list()
@@ -101,4 +97,9 @@ def get_args():
 
 
 if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+    base_path = config['moviethingsettings']['path']
+    monitor_path = config['moviethingsettings']['monitor_path']
+    themoviedbapikey = config['moviethingsettings']['themoviedbapikey']
     main_program()

@@ -9,7 +9,7 @@ import sys
 from utils import get_folders, get_folders_non_empty, get_video_filelist
 from nfoparser import get_xml_data, get_xml, get_xml_score, check_xml
 from importmovie import import_movie, import_check_path, import_process_path
-from scrapers import scrape_movie, scrape_by_id
+from scraper_imdb import scrape_movie, scrape_by_id
 import shutil
 from shutil import Error
 from pathlib import Path
@@ -168,9 +168,9 @@ class MainThread(Thread):
         # check if we have imdbid in our list, scrape 
         # tt0066921
         print(f'Manual scrape {imdbid}')
-        movie_path = [movie.moviepath for movie in self.movie_list if movie.imdb_id == imdbid]
-        if len(movie_path) >= 1:
-            scrape_by_id(imdbid, movie_path[0])
+        # movie_path = [movie.moviepath for movie in self.movie_list if movie.imdb_id == imdbid]
+        # if len(movie_path) >= 1:
+        #     scrape_by_id(imdbid, movie_path[0])
 
 class Monitor(Thread):
     def __init__(self, name, monitor_q=Queue(), monitor_path='', base_path='', verbose=True, dry_run=True):
