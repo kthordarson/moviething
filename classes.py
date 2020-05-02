@@ -1,21 +1,20 @@
 # classes
-from threading import Thread, active_count
-from queue import Queue, Empty
 import time
-import os
-import sys
-
-
-from utils import get_folders, get_folders_non_empty, get_video_filelist
-from nfoparser import get_xml_data, get_xml, get_xml_score, check_xml
-from importmovie import import_movie, import_check_path, import_process_path, import_process_files
-from scraper_imdb import scrape_movie, scrape_by_id
-import shutil
-from shutil import Error
 from pathlib import Path
+from queue import Empty, Queue
+from threading import Thread, active_count
+
+from importmovie import (
+    import_check_path, import_movie, import_process_files, import_process_path)
+from nfoparser import check_xml, get_xml, get_xml_data, get_xml_score
+# from scraper_imdb import scrape_by_id, scrape_movie
+from scraper_tmdb import TmdbScraper
+from utils import get_folders, get_folders_non_empty, get_video_filelist
+
+
 class MainThread(Thread):
     # noinspection PySameParameterValue
-    def __init__(self, name, monitor_q=Queue(), base_path='',  verbose=True, dry_run=True):
+    def __init__(self, name='', monitor_q=Queue(), base_path='', verbose=True, dry_run=True):
         Thread.__init__(self)
         self.name = name
         self.monitor_q = monitor_q
@@ -26,7 +25,7 @@ class MainThread(Thread):
         self.kill = False
         self.movie_list = []
         self.xml_list = []
-        
+
 
     def run(self):
         if self.verbose:
@@ -67,8 +66,10 @@ class MainThread(Thread):
                 pass
             time.sleep(1)
 
-    def join(self, **kwargs):
+    def join(self, timeout=None):
+        print(f'Stopping.....')
         self.kill = True
+        #self.monitor_q.join()
         super().join()
 
     def set_base_path(self, base_path):
@@ -98,7 +99,7 @@ class MainThread(Thread):
     def update_xml_list(self):
         # refresh xml list
         # todo check/repair/convert xml if needed.... ?
-        [check_xml(movie_path) for movie_path in self.folder_list]
+        _ = [check_xml(movie_path) for movie_path in self.folder_list]
         self.xml_list = [get_xml(movie_path) for movie_path in self.folder_list if get_xml(movie_path) is not None]
 
     def get_status(self):
@@ -150,7 +151,7 @@ class MainThread(Thread):
             # todo fix : attemt to get base movie name from import_path
             import_name = import_path.parts[-1]
             dest_path = Path.joinpath(self.base_path, import_name)
-            if dest_path.exists(): 
+            if dest_path.exists():
                 if self.verbose:
                     print(f'{import_name} already exists, not importing.')
             else:
@@ -165,9 +166,9 @@ class MainThread(Thread):
         else:
             if self.verbose:
                 print(f'Nothing to import from path: {import_path}')
-    
+
     def scrape(self, imdbid):
-        # check if we have imdbid in our list, scrape 
+        # check if we have imdbid in our list, scrape
         # tt0066921
         print(f'Manual scrape {imdbid}')
         # movie_path = [movie.moviepath for movie in self.movie_list if movie.imdb_id == imdbid]
@@ -175,47 +176,41 @@ class MainThread(Thread):
         #     scrape_by_id(imdbid, movie_path[0])
 
 class Monitor(Thread):
-    def __init__(self, name, monitor_q=Queue(), monitor_path='', base_path='', verbose=True, dry_run=True):
+    def __init__(self, name='', monitor_q=Queue(), monitor_path=''):
         Thread.__init__(self)
         self.name = name
         self.monitor_q = monitor_q
-        self.verbose = verbose
-        self.dry_run = dry_run
         self.monitor_path = monitor_path
-        self.base_path = base_path
         self.kill = False
+        self.folders = None
 
     def run(self):
-        if self.verbose:
-            print(f'monitor: monitoring folder {self.monitor_path} destination base:{self.base_path}')
         while True:
             self.folders = get_folders_non_empty(self.monitor_path)
+            if self.folders is not None:
+                for f in self.folders:
+                    self.monitor_q.put(('f', f))
 #            if len(self.folders) >= 1:
-            for f in self.folders:
-                dest_name = Path.joinpath(self.base_path, f.parts[-1]) 
+#            for f in self.folders:
+#                dest_name = Path.joinpath(self.base_path, f.parts[-1])
                 # print(f'monitor: dest: {dest_name}')
                 # print(f'monitor: base: {self.base_path}')
-                if not Path(dest_name).exists():
-                    # todo file_object = open(entry.path, 'a', 8)
-                    # todo check if we can move files before putting into q
-                    print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
-                    self.monitor_q.put(('f',f))
-                        
+#                if not Path(dest_name).exists():
+#                    print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
+#                    self.monitor_q.put(('f',f))
+
             if self.kill:
                 return
-            if self.verbose:
-                pass
-                # print(f'monitor: {self.name} running v:{self.verbose} dr:{self.dry_run} {len(self.folders)}')
             time.sleep(3)
 
-    def join(self, **kwargs):
+    def join(self, timeout=None):
         self.kill = True
         super().join()
 
 class MovieClass(object):
     def __init__(self, movie_data, movie_path, movie_xml):
         # self.movie_data = movie_data
-        self.moviepath = movie_path 
+        self.moviepath = movie_path
         self.moviefile = get_video_filelist(self.moviepath)
         self.movie_xml = movie_xml
         self.xml_score = get_xml_score(self.movie_xml)
@@ -234,6 +229,12 @@ class MovieClass(object):
         self.movie_title = self.movie_data.get('title') or self.movie_data.get('OriginalTitle') or self.movie_data.get('originaltitle')
         self.movie_year = self.movie_data.get('year') or self.movie_data.get('ProductionYear')  or self.movie_data.get('productionyear')
         self.imdb_id = self.movie_data.get('imdb') or self.movie_data.get('id') or self.movie_data.get('IMDBiD') or self.movie_data.get('IMdbId')
+        if isinstance(self.imdb_id, list):
+            self.imdb_id = self.imdb_id[0]
+        if self.imdb_id is not None:
+            tmdb = TmdbScraper()
+            tmdb_data = tmdb.request(self.imdb_id)
+            print(f"TMDB: {self.imdb_id} = {tmdb_data['title']}")
 
 
     def get_path(self):
@@ -247,12 +248,13 @@ class MovieClass(object):
     def get_video(self):
         # return direntry of movie
         return self.moviefile
-   
+
     def dump_info(self):
+        print(f'dump_info: {self.movie_title} [{self.moviefile}]')
         for tag in self.movie_data:
             try:
                 if tag:
-                    print(f'\t\t{tag} : {self.movie_data[tag]}')
+                    print(f'\t{tag} : {str(self.movie_data[tag])[:60]}')
             except Exception as e:
                 print(f'dump_info: error {e}')
         #pass

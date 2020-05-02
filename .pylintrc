@@ -1,0 +1,24 @@
+[MASTER]
+extension-pkg-whitelist=lxml
+
+[FORMAT]
+max-line-length=155
+good-names=i,
+           j,
+           k,
+           ex,
+           e,
+           f,
+           a,
+           t,
+           r,
+           mr,
+           Run,
+           _
+
+[MISCELLANEOUS]
+# List of note tags to take in consideration, separated by a comma.
+notes=FIXME,
+      NOTE,
+      TODO,
+      REVIEW

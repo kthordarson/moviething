@@ -1,13 +1,8 @@
 # misc functions
-import os
-import re
-from pathlib import Path, PurePath
 import inspect
-import psutil
-import sys
+from pathlib import Path
 
-from defs import vid_extensions, min_filesize
-from stringutils import sanatized_string
+from defs import MIN_FILESIZE, VID_EXTENSIONS
 
 
 # noinspection PyUnusedFunction
@@ -81,7 +76,7 @@ def get_folders_non_empty(base_path):
         folders = [d for d in base_path.glob('*') if d.is_dir()]
         result = []
         for path in folders:
-            if len([file for file in scan_path_open(path, vid_extensions, min_size=min_filesize)]) >= 1:
+            if len([file for file in scan_path_open(path, VID_EXTENSIONS, min_size=MIN_FILESIZE)]) >= 1:
                 result.append(path)
     except Exception as e:
         print(f'get_folders: {e}')
@@ -94,7 +89,7 @@ def get_video_filelist(movie_path, verbose=True, dry_run=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
     # filelist = []
-    filelist = [file for file in scan_path(movie_path, vid_extensions, min_size=min_filesize)]
+    filelist = [file for file in scan_path(movie_path, VID_EXTENSIONS, min_size=MIN_FILESIZE)]
     if len(filelist) > 1:
         print(f'Mutiple vid files in {movie_path} skipping')
         return None

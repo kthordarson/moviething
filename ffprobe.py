@@ -1,13 +1,8 @@
 # grab technical details from vidfiles with ffprobe
-import subprocess
-import re
-import os
-import sys
-
 import platform
+import subprocess
+
 from lxml import etree as et
-from pathlib import Path
-from etree import etree_to_dict
 
 
 class FFProbe():
@@ -21,9 +16,10 @@ class FFProbe():
         else:
             cmd = ["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", self.filename]
         out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        print(len(out), len(err))
         # print(f'o {len(out)}')
         # print(f'e {len(err)}')
-        root = et.ElementTree(et.fromstring(out)).getroot()
+        # root = et.ElementTree(et.fromstring(out)).getroot()
         # root = tree.getroot()
 
 
@@ -33,7 +29,7 @@ def get_ffprobe(filename):
                str(filename)]
     else:
         cmd = ["ffprobe -show_streams,-print_format, xml,-show_format,-pretty,-v, quiet", str(filename)]
-    out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     return et.ElementTree(et.fromstring(out)).getroot()
 
 

@@ -1,29 +1,32 @@
 # global definitions
-import string
 import re
-import os
-import sys
+import string
 
-# imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
+# IMDB_REGEX = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/tt\d{7}")
 
-imdb_regex = re.compile(r'(http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7}))')
-mediainfo_regex = re.compile(r'\[(\/)?mediainfo\]')  # (r'\[(\/)?mediainfo\]')
-xml_title_regex = re.compile(r'\<(?:OriginalTitle|title)\>(.+)\<')
-xml_year_regex = re.compile(r'\<(?:ProductionYear|year)\>(.+)\<')
-xml_tag_value_regex = re.compile(r'\<(\w*)\>(.+)\<')
-xml_tag_regex = re.compile(r'\<(\w*)\>(?:.+)\<')
+IMDB_REGEX = re.compile(r'(http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7}))')
+MEDIAINFO_REGEX = re.compile(r'\[(\/)?mediainfo\]')  # (r'\[(\/)?mediainfo\]')
+XML_TITLE_REGEX = re.compile(r'\<(?:OriginalTitle|title)\>(.+)\<')
+XML_YEAR_REGEX = re.compile(r'\<(?:ProductionYear|year)\>(.+)\<')
+XML_TAG_VALUE_REGEX = re.compile(r'\<(\w*)\>(.+)\<')
+XML_TAG_REGEX = re.compile(r'\<(\w*)\>(?:.+)\<')
+
+YEAR_REGEX = re.compile(r'((?:19[0-9]|20[012])[0-9])')
+CODEC_REGEX = re.compile(r'XViD|XVID|xvid|Xvid|XviD|x264|h\\.?264')
+QUALITY_REGEX = re.compile(r'((?:DVD|HD|B[Rr]|BD|WEB)[RrIiPp]{3}|[HP]DTV|H?D?CAM|[Bb]lu[Rr]ay|DVDSCR|WEB-DL)')
+RESOLUTION_REGEX = re.compile(r'([0-9]{3,4}p)')
 
 # regex_mi_2 = r'\[\/mediainfo\]'
-# imdb_regex = re.compile(r"http(?:s)?://(?:www\.)?imdb\.com/title/tt\d{7}")
-# imdb_regex = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
-valid_nfo_files = ('nfo', 'xml', 'txt')
+# IMDB_REGEX = re.compile(r"http(?:s)?://(?:www\.)?imdb\.com/title/tt\d{7}")
+# IMDB_REGEX = re.compile(r"http(?:s)?:\/\/(?:www\.)?imdb\.com\/title\/(tt\d{7})")
+VALID_NFO_FILES = ('nfo', 'xml', 'txt')
 
-valid_input_string_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-valid_tag_chars = "-_.() :/%s%s" % (string.ascii_letters, string.digits)
-valid_xml_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
-char_limit = 255
+VALID_INPUT_STRING_CHARS = "-_.() %s%s" % (string.ascii_letters, string.digits)
+VALID_TAG_CHARS = "-_.() :/%s%s" % (string.ascii_letters, string.digits)
+VALID_XML_CHARS = "-_.()%s%s" % (string.ascii_letters, string.digits)
+CHAR_LIMIT = 255
 
-mediainfo_tags = [
+MEDIAINFO_TAGS = [
     'aspect', 'audio bit rate', 'audio bit rate mode', 'audio channel positions', 'audio channel(s)',
     'audio channel(s)_original',
     'audio codec id', 'audio compression mode', 'audio duration', 'audio encoded date', 'audio format',
@@ -51,7 +54,7 @@ mediainfo_tags = [
     'video width', 'video writing library', 'votes', 'watched', 'width', 'writing library', 'year'
 ]
 
-mediacenter_tags = ['LocalTitle', 'OriginalTitle', 'ForcedTitle', 'IMDBrating', 'ProductionYear', 'MPAARating', 'Added',
+MEDIACENTER_TAGS = ['LocalTitle', 'OriginalTitle', 'ForcedTitle', 'IMDBrating', 'ProductionYear', 'MPAARating', 'Added',
                     'IMDB', 'IMDbId', 'RunningTime', 'TMDbId', 'Language', 'Country', 'Budget', 'Revenue', 'Persons',
                     'Genres', 'Description', 'Studios', 'Awards', 'BackdropURL', 'Director', 'FullCertifications',
                     'FormalMPAA', 'Votes', 'ShortDescription', 'Outline', 'Plot', 'PosterURL', 'TagLine', 'TagLines',
@@ -64,7 +67,7 @@ mediacenter_tags = ['LocalTitle', 'OriginalTitle', 'ForcedTitle', 'IMDBrating', 
                     'VideoLength', 'VideoQuality', 'VideoWidth', 'AudioBitrate', 'AudioChannels', 'AudioCodec',
                     'AudioCodecRaw', 'AudioFrequency', 'AspectRatio', 'MediaInfo', 'VideoHasSubtitles', 'certification',
                     'filenameandpath']
-kodi_tags = ['title', 'originaltitle', 'sorttitle', 'rating', 'votes', 'year', 'plot', 'outline', 'tagline', 'runtime',
+KODI_TAGS = ['title', 'originaltitle', 'sorttitle', 'rating', 'votes', 'year', 'plot', 'outline', 'tagline', 'runtime',
              'mpaa', 'id', 'genre', 'country', 'studio', 'credits', 'director', 'trailer', 'actor', 'thumb', 'fanart',
              'top250', 'playcount', 'tmdbid', 'set', 'watched', 'fileinfo', 'LocalTitle', 'OriginalTitle',
              'ForcedTitle', 'IMDBrating', 'ProductionYear', 'MPAARating', 'Added', 'IMDB', 'IMDbId', 'RunningTime',
@@ -78,12 +81,18 @@ kodi_tags = ['title', 'originaltitle', 'sorttitle', 'rating', 'votes', 'year', '
              'Frameratemode', 'Framerate', 'Colorspace', 'Chromasubsampling', 'Bitdepth', 'Scantype', 'Streamsize',
              'Writinglibrary', 'filenameandpath', 'videosource', 'SortTitle', 'CDUniverseId', 'Tagline', 'Taglines',
              'Type', 'Taggeddate', 'tmdb', 'tmdbcolid', 'uniqueid', 'datemodified']
-vid_extensions = (
+
+TMDB_TAGS = ['adult', 'backdrop_path', 'belongs_to_collection', 'budget', 'genres', 'homepage', 'id', 'imdb_id',
+             'original_language', 'original_title', 'overview', 'popularity', 'poster_path', 'production_companies',
+             'production_countries', 'release_date', 'revenue', 'runtime', 'spoken_languages', 'status', 'tagline',
+             'title', 'video', 'vote_average', 'vote_count']
+
+VID_EXTENSIONS = (
     '.mp4', '.mpeg', '.mpg', '.mp2', '.mpe', '.mvpv', '.mp4', '.m4p', '.m4v', '.mov', '.qt', '.avi', '.ts', '.mkv',
     '.wmv', '.ogv',
     '.webm', '.ogg'
 )
-all_extracted_tags = ['fileinfo', 'title', 'originaltitle', 'sorttitle', 'year', 'premiered', 'rating', 'votes',
+ALL_EXTRACTED_TAGS = ['fileinfo', 'title', 'originaltitle', 'sorttitle', 'year', 'premiered', 'rating', 'votes',
                       'top250', 'outline', 'plot', 'tagline', 'country', 'fanart', 'runtime', 'mpaa', 'genre',
                       'credits', 'director', 'studio', 'trailer', 'playcount', 'createdate', 'stars', 'LocalTitle',
                       'OriginalTitle', 'ForcedTitle', 'IMDBrating', 'ProductionYear', 'MPAARating', 'Added', 'IMDB',
@@ -106,18 +115,21 @@ all_extracted_tags = ['fileinfo', 'title', 'originaltitle', 'sorttitle', 'year',
                       'EpisodeName', 'EpisodeNumber', 'DVD_chapter', 'DVD_discid', 'DVD_episodenumber', 'DVD_season',
                       'GuestStars', 'ProductionCode', 'Writer', 'SeasonNumber', 'absolute_number', 'seasonid',
                       'seriesid', 'airsafter_season', 'airsbefore_episode', 'airsbefore_season',
-                      'Combined_episodenumber', 'Combined_season', 'filename']
+                      'Combined_episodenumber', 'Combined_season', 'filename', 'adult', 'backdrop_path',
+                      'belongs_to_collection', 'budget', 'genres', 'homepage', 'id', 'imdb_id', 'original_language',
+                      'original_title', 'overview', 'popularity', 'poster_path', 'production_companies', 'production_countries',
+                      'release_date', 'revenue', 'runtime', 'spoken_languages', 'status', 'tagline', 'title', 'video', 'vote_average', 'vote_count']
 
-xml_type_list = ['movie', 'Title', 'Series', 'Item']
+XML_TYPE_LIST = ['movie', 'Title', 'Series', 'Item', 'ffprobe']
 
-min_filesize = 40000000
+MIN_FILESIZE = 40000000
 
-junkpathname = 'junkignore'
-invalid_string = '.invalid'
+JUNKPATHNAME = 'junkignore'
+INVALID_STRING = '.invalid'
 
 # unwanted files / subdirs
 # will be deleted automatically
-unwanted_files = dict(
+UNWANTED_FILES = dict(
     subdirs=("sample", "samples"),
     txtfiles=(
         "readme.txt", "torrent downloaded from.txt", "rarbg.com.txt", "torrent-downloaded-from-extratorrent.cc.txt",

@@ -2,27 +2,20 @@
 # read and parse nfo files, return valid info
 
 import concurrent.futures
-import glob
-# import mmap
-import os
 import re
-# import string
-import time
-# import unicodedata
-
-# from xml.parsers.expat import ExpatError
-import sys
-
-from lxml import etree as et
-# noinspection PyUnresolvedReferences
+from pathlib import Path
 from xml.dom import minidom
 
-from defs import imdb_regex, mediainfo_regex, mediainfo_tags, valid_tag_chars, valid_xml_chars, xml_type_list
+from lxml import etree as et
+
+from defs import (
+    IMDB_REGEX, MEDIAINFO_REGEX, MEDIAINFO_TAGS, VALID_TAG_CHARS,
+    VALID_XML_CHARS, XML_TYPE_LIST)
 from etree import etree_to_dict
 from stringutils import sanatized_string
-from utils import who_called_func
-from pathlib import Path, PurePosixPath, PurePath, PureWindowsPath
-from scraper_imdb import imdb_scrape_id, parse_imdb_data
+
+# noinspection PyUnresolvedReferences
+
 
 
 # from stringutils import sanatized_string
@@ -38,8 +31,7 @@ def get_xml_data(file):
         #        root = tree.getroot()
         #        xml_data = etree_to_dict(root)
         return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(
-            et.parse(str(file)).getroot()).get(
-            'Title') or None
+            et.parse(str(file)).getroot()).get('Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
@@ -70,9 +62,9 @@ def is_valid_xml(xml_file):
     # print(type(file))
     try:
         data_root = et.parse(str(xml_file)).getroot()
-        data = etree_to_dict(data_root)
-        if data_root.tag not in xml_type_list:
-            print(f'is_valid_xml: Invalid XML {xml_file} {e}')
+        # data = etree_to_dict(data_root)
+        if data_root.tag not in XML_TYPE_LIST:
+            print(f'is_valid_xml: Invalid XML {xml_file} {data_root.tag}')
             return False
         else:
             return True
@@ -87,7 +79,7 @@ def check_xml(movie_path):
         data_root = et.parse(str(xml_file)).getroot()
         if data_root.tag == 'Title':
             print(f'check_xml: need to convert {str(xml_file)}')
-    pass
+    # pass
 
 
 # noinspection PySameParameterValue
@@ -202,8 +194,8 @@ def is_valid_nfo(file):
         return False
     if data is not None:
         # print(type(data))
-        check_mi = list(filter(mediainfo_regex.match, data))
-        check_imdb = imdb_regex.findall(str(data))
+        check_mi = list(filter(MEDIAINFO_REGEX.match, data))
+        check_imdb = IMDB_REGEX.findall(str(data))
         # print(check_imdb)
         if len(check_mi) == 2 or len(check_imdb) >= 1:
             # nfo has valid mediainfo tags or valid imdb link/id
@@ -219,23 +211,23 @@ def get_tags_from_nfo(nfo):
         # check_imdb = None
         tagstrip = re.compile(r'\[[^\]]*\]')
         line = re.sub(tagstrip, '', line)
-        check_imdb = imdb_regex.findall(str(line))  # get imdb links before sanatizing line
+        check_imdb = IMDB_REGEX.findall(str(line))  # get imdb links before sanatizing line
         if len(check_imdb) >= 1:
             result.append(('imdblink', check_imdb[0][0]))
             result.append(('IMDbId', check_imdb[0][1]))  # 57,23:             id_str = 'IMDbId'
-        line = sanatized_string(line, whitelist=valid_tag_chars, replace='', format='NFC')
+        line = sanatized_string(line, whitelist=VALID_TAG_CHARS, replace='', s_format='NFC')
         if ':' in line:
             tag, value = line.split(':', maxsplit=1)
             tag = tag.strip(' :.').lower()
             # tag = tag.replace(' ', '_')
             value = value.strip(' \n').lower()
-            for media_tag in mediainfo_tags:
+            for media_tag in MEDIAINFO_TAGS:
                 mr = re.compile(media_tag)
                 match = mr.search(tag)
                 if match and len(value) > 1:
-                    xml_tag = sanatized_string(media_tag, whitelist=valid_xml_chars, format='NFC')
+                    xml_tag = sanatized_string(media_tag, whitelist=VALID_XML_CHARS, s_format='NFC')
                     result.append((xml_tag, value))
-    #            if tag in mediainfo_tags:
+    #            if tag in MEDIAINFO_TAGS:
     #                result.append((tag,value))
     return result
 
@@ -251,16 +243,16 @@ def nfo_to_xml(nfo):
         a = et.SubElement(root, tag[0])
         a.text = tag[1]
     # data = et.tostring(tree.getroot(), encoding='utf-8', method='xml')
-    try:
-        imdb_link = [imdb_regex.search(tag[1]).group(2) for tag in tags if imdb_regex.search(tag[1]) is not None]
-    except Exception:
-        imdb_link = None
-    if imdb_link is not None:
-        # scrape imdb link
-        imdbdata = None  # imdb_scrape_id(imdb_link[0])
-        for tag in imdbdata:
-            a = et.SubElement(root, tag)
-            a.text = imdbdata[tag]
+    # try:
+    #     imdb_link = [IMDB_REGEX.search(tag[1]).group(2) for tag in tags if IMDB_REGEX.search(tag[1]) is not None]
+    # except Exception:
+    #     imdb_link = None
+    # if imdb_link is not None:
+    #     # scrape imdb link
+    #     imdbdata = None  # imdb_scrape_id(imdb_link[0])
+    #     for tag in imdbdata:
+    #         a = et.SubElement(root, tag)
+    #         a.text = imdbdata[tag]
     # [et.SubElement(root2, k) for k in imdbdata] # [print(f'k: {k} v:{imdbdata[k]}') for k in imdbdata]
     # imdb_result = parse_imdb_data(imdbdata, imdb_link[0])
     data = et.tostring(tree.getroot(), method='xml')
@@ -290,7 +282,7 @@ def nfo_process_path(path):
     nfo_list = get_nfo_list(path)
     # [print(get_tags_from_nfo(file)) for file in nfo_list]
     # print(nfo_list)
-    [nfo_to_xml(file) for file in nfo_list]
+    _ = [nfo_to_xml(file) for file in nfo_list]
     return get_xml(path)
 
 
@@ -354,10 +346,10 @@ def test_xml_combine():
 
 if __name__ == '__main__':
     print('nfoparser')
-    nfo_list = get_nfo_list(Path('d:/movies_incoming/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/'))
+    # nfo_list = get_nfo_list(Path('d:/movies_incoming/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/'))
     # [print(get_tags_from_nfo(file)) for file in nfo_list]
-    print(nfo_list)
-    [nfo_to_xml(file) for file in nfo_list]
+    # print(nfo_list)
+    # [nfo_to_xml(file) for file in nfo_list]
     # start = time.perf_counter()
     # test_nfo('d:/movies/test-abc')
     # finish = time.perf_counter()
@@ -371,4 +363,4 @@ if __name__ == '__main__':
     # test_nfo_tt('d:/movies/test-abc')
     # finish = time.perf_counter()
     # print(f'Finished pp in {round(finish - start, 2)} second(s)')
-    pass
+    # pass

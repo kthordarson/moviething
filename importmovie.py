@@ -1,13 +1,12 @@
-import os
 import shutil
 from pathlib import Path
-import sys
 
 from lxml import etree as et
 
-from nfoparser import get_xml, get_xml_movie_title, nfo_process_path, get_xml_list, get_nfo_list
-from utils import get_video_filelist
 from ffprobe import get_ffprobe
+from nfoparser import (get_nfo_list, get_xml, get_xml_list,
+                       get_xml_movie_title, nfo_process_path)
+from utils import get_video_filelist
 
 
 def import_check_path(import_path, verbose=True, dry_run=True):
@@ -24,6 +23,7 @@ def import_check_path(import_path, verbose=True, dry_run=True):
         if get_video_filelist(import_path) is None:
             return False
         else:
+            # todo fix this
             if len(get_nfo_list(import_path)) == 0 and len(get_xml_list(import_path)) == 0:
                 # no nfo/xml found, make some
                 print(f'import_check_path: make xml')
@@ -77,7 +77,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         # get_nfo(movie_path)
     movie_title = get_xml_movie_title(xml)
     import_name = movie_path.parts[-1]
-    if movie_title == None:
+    if movie_title is None:
         movie_title = import_name
     if str(movie_path) != str(import_name):
         target_name = Path.joinpath(base_path, movie_title)
@@ -98,7 +98,7 @@ def import_process_files(base_path, imported_movie_path, verbose=True, dry_run=T
         _vidfile = Path(get_video_filelist(imported_movie_path))
         vid_ext = vidfile.suffix
         if movie_title + vid_ext != str(vidfile):
-            target = Path.joinpath(p, Path(movie_title + vid_ext))
+            target = Path.joinpath(imported_movie_path, Path(movie_title + vid_ext))
             try:
                 _vidfile.rename(target)
                 print(f'import_process_path: renamed {str(_vidfile)} to {str(target)}')
