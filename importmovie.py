@@ -79,6 +79,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         print(f'import_process_path: {base_path} {movie_path}')
     xml = get_xml(movie_path)
     if xml is None:
+        # if no xml found, check for nfo files and process....
         xml = nfo_process_path(movie_path)
         # xml = get_xml(movie_path)
         # get_nfo(movie_path)
@@ -105,9 +106,11 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
             # tree_root.write(xml_filename)
             # print(tree_element)
     if movie_title is None:
+        # movie_title not found or no xml/nfo, use the original folder name instead
         movie_title = import_name
     if str(movie_path) != str(import_name):
         target_name = Path.joinpath(base_path, movie_title)
+        print(f'import_process_path: rename {movie_path} to {target_name}')
         movie_path.rename(target_name)
 
 

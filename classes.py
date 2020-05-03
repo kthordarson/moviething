@@ -6,7 +6,7 @@ from threading import Thread, active_count
 
 from importmovie import (
     import_check_path, import_movie, import_process_files, import_process_path)
-from nfoparser import check_xml, get_xml, get_xml_data, get_xml_score
+from nfoparser import check_xml, get_xml, get_xml_data
 # from scraper_imdb import scrape_by_id, scrape_movie
 from scraper_tmdb import TmdbScraper
 from utils import get_folders, get_folders_non_empty, get_video_filelist
@@ -145,7 +145,7 @@ class MainThread(Thread):
 
     def dump_movie_list(self):
         try:
-            _ = [print(f'Title: {movie.movie_title} Year: {movie.movie_year} imdb: {movie.imdb_id} x: {movie.xml_score}') for movie in self.movie_list]
+            _ = [print(f'Title: {movie.movie_title} Year: {movie.movie_year} imdb: {movie.imdb_id}') for movie in self.movie_list]
         except Exception as e:
             print(f'dump_movie_list: error {e}')
 
@@ -162,7 +162,7 @@ class MainThread(Thread):
             else:
                 imported_movie_path = import_movie(self.base_path, import_path, import_name, self.verbose, self.dry_run)
                 if imported_movie_path is not None:
-                    print(f'Import successful to {imported_movie_path}')
+                    # print(f'Import successful to {imported_movie_path}')
                     import_process_path(self.base_path, imported_movie_path, self.verbose, self.dry_run)
                     import_process_files(self.base_path, imported_movie_path, self.verbose, self.dry_run)
                     self.update()
@@ -215,7 +215,6 @@ class MovieClass(object):
         self.moviepath = movie_path
         self.moviefile = get_video_filelist(self.moviepath)
         self.movie_xml = movie_xml
-        self.xml_score = get_xml_score(self.movie_xml)
         if movie_data is not None:
             self.movie_data = movie_data
             self.do_update()

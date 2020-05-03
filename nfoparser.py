@@ -51,7 +51,6 @@ def get_xml_score(xml_file):
         valid_score += len([k.text.lower() for k in data.findall('title')])
         # valid_score += len([k.text for k in data.findall('Title')])
         # valid_score += len([k.text for k in data.findall('originaltitle')])
-        # print(f'get_xml_score: caller: {who_called_func()} {file} score: {valid_score}')
         return valid_score
     except Exception as e:
         print(f'get_xml_score: Invalid XML {xml_file} {e}')
