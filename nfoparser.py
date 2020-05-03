@@ -104,44 +104,38 @@ def get_xml(movie_path):
     # todo fix if more than one found.....
     # print(f'get_xml {movie_path}')
     # print(f'get_xml: caller {who_called_func()}')
-    try:
-        xml = [xml for xml in
-               movie_path.glob('*.xml')]  # glob.glob(movie_path + '/**.xml', recursive=False)  # movie_path+'/*.xml')
-        # print(f'got xml {xml}')
-    except Exception as e:
-        print(f'Error in get_xml {movie_path} {e}')
+    # xml = [xml for xml in movie_path.glob('*.xml')]
+    xml = ([xml for xml in movie_path.glob('*.xml')] or None)
+    if xml is None:
         return None
-    if len(xml) == 0:
-        return None
-    elif len(xml) == 1 and is_valid_xml(xml[0]):
+    if len(xml) == 1 and is_valid_xml(xml[0]):
         return xml[0]
-    elif len(xml) > 1:
-        print(f'Multiple xml found in {movie_path}')
-        newxml = combine_xml(xml)
-        result = et.ElementTree(element=newxml.getroot())
-        result_filename = Path.joinpath(movie_path.parts[-1] + '.xml')
-        for f in xml:
-            try:
-                f.rename(str(f) + '.olddata')
-            except Exception as e:
-                print(f'get_xml ERR {e} while renaming old xml')
-                return None
-        # print(type(result))
-        # resultroot = result.getroot()
-        try:
-            result.write(result_filename)
-            return result_filename
-        except Exception as e:
-            print(f'get_xml ERR {e} while saving new combined xml')
-            return None
     else:
         return None
+        # print(f'Multiple xml found in {movie_path}')
+        # newxml = combine_xml(xml)
+        # result = et.ElementTree(element=newxml.getroot())
+        # result_filename = Path.joinpath(movie_path, movie_path.parts[-1]+'.xml')
+        # for f in xml:
+        #     try:
+        #         f.rename(str(f) + '.olddata')
+        #     except Exception as e:
+        #         print(f'get_xml ERR {e} while renaming old xml')
+        #         return None
+        # # print(type(result))
+        # # resultroot = result.getroot()
+        # try:
+        #     result.write(result_filename)
+        #     return result_filename
+        # except Exception as e:
+        #     print(f'get_xml ERR {e} while saving new combined xml')
+        #     return None
 
 
 def combine_xml(files):
     first = None
     for filename in files:
-        data = et.parse(filename).getroot()
+        data = et.parse(str(filename)).getroot()
         if first is None:
             first = data
         else:
@@ -162,17 +156,27 @@ def get_xml_movie_title(xml_file):
         title = sanatized_string(movie_title) + ' (' + movie_year + ')'
         return title
     except TypeError as e:  # as e:
-        print(f'get_xml_movie_title: {xml_file} error {e}')
+        # print(f'get_xml_movie_title: {xml_file} error {e}')
         return None
     except AttributeError as e:  # as e:
-        print(f'get_xml_movie_title: {xml_file} error {e}')
+        # print(f'get_xml_movie_title: {xml_file} error {e}')
         return None
     except:
         return None
 
+def get_xml_imdb_id(xml_file):
+    # get imdb id from xml
+    # movie_title = None
+    # title = None
+    try:
+        root = et.parse(str(xml_file)).getroot()
+        return root.find('id').text
+    except Exception as e:  # as e:
+        print(f'get_xml_imdb_id: {xml_file} error {e}')
+        return None
 
 def get_xml_imdb_link(xml_file):
-    # extract valid movie title and year from xml_file
+    # get imdb link from xml
     # movie_title = None
     # title = None
     try:
@@ -214,7 +218,7 @@ def get_tags_from_nfo(nfo):
         check_imdb = IMDB_REGEX.findall(str(line))  # get imdb links before sanatizing line
         if len(check_imdb) >= 1:
             result.append(('imdblink', check_imdb[0][0]))
-            result.append(('IMDbId', check_imdb[0][1]))  # 57,23:             id_str = 'IMDbId'
+            result.append(('id', check_imdb[0][1]))  # 57,23:             id_str = 'IMDbId'
         line = sanatized_string(line, whitelist=VALID_TAG_CHARS, replace='', s_format='NFC')
         if ':' in line:
             tag, value = line.split(':', maxsplit=1)

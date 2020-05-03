@@ -1,5 +1,6 @@
 # misc functions
 import inspect
+# import time
 from pathlib import Path
 
 from defs import MIN_FILESIZE, VID_EXTENSIONS
@@ -12,14 +13,32 @@ def who_called_func():
 
 def can_open_file(file):
     try:
-        dest = Path(str(file) + '.tmp')
-        Path.rename(file, dest)
-        Path.rename(dest, file)
+        #dest = Path(str(file) + '.tmp')
+        #Path.rename(file, dest)
+        Path.rename(file, file)
         return True
     except Exception as e:
-        print(f'file in use {e}')
+        print(f'can_open_file: file in use {e}')
+        # time.sleep(1)
         return False
 
+def can_open_path(path):
+    try:
+        for file in path.glob('*'):
+            if file.suffix in VID_EXTENSIONS:
+                try:
+                    #dest = Path(str(file) + '.tmp')
+                    #Path.rename(file, dest)
+                    #Path.rename(dest, file)
+                    Path.rename(file, file)
+                    return True
+                except Exception as e:
+                    print(f'can_open_path: file in use {e}')
+                    # time.sleep(1)
+                    return False
+        return True
+    except:
+        return False
 
 def xcan_open_file(file):
     # check if we can get handle
@@ -72,20 +91,16 @@ def get_folders(base_path):
 
 
 def get_folders_non_empty(base_path):
-    try:
-        folders = [d for d in base_path.glob('*') if d.is_dir()]
-        result = []
-        for path in folders:
-            if len([file for file in scan_path_open(path, VID_EXTENSIONS, min_size=MIN_FILESIZE)]) >= 1:
-                result.append(path)
-    except Exception as e:
-        print(f'get_folders: {e}')
-        return []
-        # exit(-1)
+    folders = [d for d in base_path.glob('*') if d.is_dir()]
+    result = [path for path in folders if can_open_path(path)]
+    # result = [path for path in scan_path_open(folders, VID_EXTENSIONS, min_size=MIN_FILESIZE)]
+    # for path in folders:
+    #     if len([file for file in scan_path_open(path, VID_EXTENSIONS, min_size=MIN_FILESIZE)]) >= 1:
+    #         result.append(path)
     return result
 
 
-def get_video_filelist(movie_path, verbose=True, dry_run=True):
+def get_video_filelist(movie_path, verbose=True):
     # scan given move_path for valid video files, return first found
     # todo handle multiple valid video files in movie_path
     # filelist = []

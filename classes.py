@@ -37,14 +37,17 @@ class MainThread(Thread):
             try:
                 # [0] f: new movie
                 # [0] s: scrape
+                # print(f'q items put {self.monitor_q.qsize()}')
                 q_item = self.monitor_q.get_nowait()
                 # new_movie = self.monitor_q.get_nowait()
                 if q_item[0] == 'f':
                     new_movie = q_item[1]
-                    print(f'new_movie found: {new_movie}')
+                    # print(f'new_movie found: {new_movie}')
                     self.import_from_path(new_movie)
                     # self.grab_folder(new_movie)
+                    # q_item.update
                     self.monitor_q.task_done()
+                    # print(f'q items task done {self.monitor_q.qsize()}')
                 if q_item[0] == 's':
                     pass
                     # self.scrape_threads = list()
@@ -58,13 +61,15 @@ class MainThread(Thread):
                     # self.monitor_q.task_done()
                     # pass
             except Empty:
+                # print(f'q empty')
+                # time.sleep(0.5)
                 pass
             if self.kill:
                 return
             if self.verbose:
                 # self.get_status()
                 pass
-            time.sleep(1)
+            # time.sleep(1)
 
     def join(self, timeout=None):
         print(f'Stopping.....')
@@ -163,14 +168,15 @@ class MainThread(Thread):
                     self.update()
                 else:
                     print(f'Import error')
-        else:
-            if self.verbose:
-                print(f'Nothing to import from path: {import_path}')
+        # else:
+        #     if self.verbose:
+        #         print(f'Nothing to import from path: {import_path}')
 
     def scrape(self, imdbid):
+        pass
         # check if we have imdbid in our list, scrape
         # tt0066921
-        print(f'Manual scrape {imdbid}')
+        # print(f'Manual scrape {imdbid}')
         # movie_path = [movie.moviepath for movie in self.movie_list if movie.imdb_id == imdbid]
         # if len(movie_path) >= 1:
         #     scrape_by_id(imdbid, movie_path[0])
@@ -183,26 +189,22 @@ class Monitor(Thread):
         self.monitor_path = monitor_path
         self.kill = False
         self.folders = None
-
+# watch monitor_path for new items/movies, if folder contains video (extension and min size), check for write access (can move?)
+# put on monitor_q for processing
     def run(self):
         while True:
             self.folders = get_folders_non_empty(self.monitor_path)
-            if self.folders is not None:
-                for f in self.folders:
-                    self.monitor_q.put(('f', f))
-#            if len(self.folders) >= 1:
-#            for f in self.folders:
-#                dest_name = Path.joinpath(self.base_path, f.parts[-1])
-                # print(f'monitor: dest: {dest_name}')
-                # print(f'monitor: base: {self.base_path}')
-#                if not Path(dest_name).exists():
-#                    print(f'monitor: put {f} {f} base: {self.base_path} dest: {dest_name} ')
-#                    self.monitor_q.put(('f',f))
-
+            # print(f'monitor: {self.folders}')
+            # time.sleep(1)
+            # print(f'monitor: {self.folders}')
+            for f in self.folders:
+                # print(f'monitor sending to q: {f} {self.folders}')
+                self.monitor_q.put_nowait(('f', f))
+                self.folders.pop(self.folders.index(f))
+                # print(f'monitor popped: {f} {self.folders}')
+                # time.sleep(1)
             if self.kill:
                 return
-            time.sleep(3)
-
     def join(self, timeout=None):
         self.kill = True
         super().join()
@@ -231,10 +233,10 @@ class MovieClass(object):
         self.imdb_id = self.movie_data.get('imdb') or self.movie_data.get('id') or self.movie_data.get('IMDBiD') or self.movie_data.get('IMdbId')
         if isinstance(self.imdb_id, list):
             self.imdb_id = self.imdb_id[0]
-        if self.imdb_id is not None:
-            tmdb = TmdbScraper()
-            tmdb_data = tmdb.request(self.imdb_id)
-            print(f"TMDB: {self.imdb_id} = {tmdb_data['title']}")
+        # if self.imdb_id is not None:
+        #     tmdb = TmdbScraper()
+        #     tmdb_data = tmdb.request(self.imdb_id)
+        #     print(f"TMDB: {self.imdb_id} = {tmdb_data['title']}")
 
 
     def get_path(self):
