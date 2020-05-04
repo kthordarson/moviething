@@ -4,14 +4,16 @@
 import concurrent.futures
 import re
 from pathlib import Path
+from random import randint
 from xml.dom import minidom
 
 from lxml import etree as et
 
-from defs import IMDB_REGEX, MEDIAINFO_REGEX, MEDIAINFO_TAGS, VALID_TAG_CHARS, VALID_XML_CHARS, XML_TYPE_LIST
+from defs import (
+    IMDB_REGEX, MEDIAINFO_REGEX, MEDIAINFO_TAGS, VALID_TAG_CHARS,
+    VALID_XML_CHARS, XML_TYPE_LIST)
 from etree import etree_to_dict
 from stringutils import sanatized_string
-
 
 # noinspection PyUnresolvedReferences
 
@@ -33,6 +35,12 @@ def get_xml_data(file):
         print(f'ERROR: get_xml_data {file} {e}')
         return None
 
+def get_xml_moviedata(file):
+    # read xml data from file, convert to dict and return dict with parsed movie info
+    # xml_data = None
+    root = et.parse(str(file)).getroot()
+    data = etree_to_dict(root)
+    return data['movie']
 
 def get_xml_score(xml_file):
     # todo need to fix this...
@@ -107,25 +115,26 @@ def get_xml(movie_path):
     if len(xml) == 1 and is_valid_xml(xml[0]):
         return xml[0]
     else:
-        return None
-        # print(f'Multiple xml found in {movie_path}')
-        # newxml = combine_xml(xml)
-        # result = et.ElementTree(element=newxml.getroot())
-        # result_filename = Path.joinpath(movie_path, movie_path.parts[-1]+'.xml')
-        # for f in xml:
-        #     try:
-        #         f.rename(str(f) + '.olddata')
-        #     except Exception as e:
-        #         print(f'get_xml ERR {e} while renaming old xml')
-        #         return None
-        # # print(type(result))
-        # # resultroot = result.getroot()
-        # try:
-        #     result.write(result_filename)
-        #     return result_filename
-        # except Exception as e:
-        #     print(f'get_xml ERR {e} while saving new combined xml')
-        #     return None
+        # return None
+        print(f'Multiple xml found in {movie_path}')
+        newxml = combine_xml(xml)
+        result = et.ElementTree(element=newxml.getroot())
+        result_filename = Path.joinpath(movie_path, movie_path.parts[-1]+'.xml')
+        for f in xml:
+            try:
+                f_target = str(f) + '.' + str(randint(1, 99)) + '.olddata'
+                f.rename(f_target)
+            except Exception as e:
+                print(f'get_xml ERR {e} while renaming old xml')
+                return None
+        # print(type(result))
+        # resultroot = result.getroot()
+        try:
+            result.write(result_filename)
+            return result_filename
+        except Exception as e:
+            print(f'get_xml ERR {e} while saving new combined xml')
+            return None
 
 
 def combine_xml(files):
@@ -167,7 +176,8 @@ def get_xml_imdb_id(xml_file):
     # title = None
     try:
         root = et.parse(str(xml_file)).getroot()
-        return root.find('id').text
+        result = [tag.text for tag in root if 'id' in tag.tag.lower()]
+        return result[0]  if len(result) >= 1 else None # root.find('id').text
     except Exception as e:  # as e:
         print(f'get_xml_imdb_id: {xml_file} error {e}')
         return None
@@ -264,7 +274,7 @@ def nfo_to_xml(nfo):
     result_file = Path.joinpath(nfo.parent, nfo.parts[-2] + '.xml')  # nfo + '.xml'
     if Path(result_file).exists():
         # rename
-        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.olddata')
+        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(1, 99)) +  '.olddata')
         try:
             result_file.rename(target)
         except Exception as e:
@@ -273,8 +283,7 @@ def nfo_to_xml(nfo):
         with open(result_file, mode='w') as f:
             f.write(pretty_data)
         # rename old nfo
-        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.nfo.olddata')
-        nfo.rename(target)
+        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(1, 99)) + '.nfo.olddata')
     except Exception as e:
         print(f'nfo_to_xml: save error {e}')
 

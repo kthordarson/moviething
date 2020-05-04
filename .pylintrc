@@ -1,6 +1,9 @@
 [MASTER]
 extension-pkg-whitelist=lxml
 
+[MESSAGES CONTROL]
+disable=bad-continuation, invalid-name, redefined-builtin
+
 [FORMAT]
 max-line-length=155
 good-names=i,

@@ -1,6 +1,6 @@
 # misc functions
 import inspect
-# import time
+import time
 from pathlib import Path
 
 from defs import MIN_FILESIZE, VID_EXTENSIONS
@@ -34,8 +34,8 @@ def can_open_path(path):
                     Path.rename(file, file)
                     return True
                 except Exception as e:
-                    print(f'can_open_path: file in use {e}')
-                    # time.sleep(1)
+                    # print(f'can_open_path: file in use {e}')
+                    time.sleep(1)
                     return False
         return True
     except:
@@ -113,11 +113,8 @@ def get_video_filelist(movie_path, verbose=True):
     if len(filelist) == 1:
         return filelist[0]
     else:
-        # if verbose:
-        #     print(f'No videos in {movie_path}')
         return None
 
-
 if __name__ == '__main__':
-    pass
+    print('utils')
     # test_fix_filenames()

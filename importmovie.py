@@ -1,14 +1,16 @@
 import datetime
+import json
 import shutil
 from pathlib import Path
+from random import randint
 from xml.dom import minidom
 
 from lxml import etree as et
 
 from etree import element
-
 # from ffprobe import get_ffprobe
-from nfoparser import get_xml, get_xml_imdb_id, get_xml_movie_title, nfo_process_path
+from nfoparser import (get_xml, get_xml_imdb_id, get_xml_movie_title,
+                       get_xml_moviedata, nfo_process_path)
 from scraper_tmdb import TmdbScraper
 from stringutils import sanatized_string
 from utils import get_video_filelist
@@ -43,8 +45,52 @@ def import_check_path(import_path, verbose=True, dry_run=True):
             #         print(f'import_check_path: error saving ffprobe xml {e}')
             return True
 
+# todo import_move return movie_data if successful else None
+# 1. copy/move folder to base
+# 2. look for imdb id in existing xml/nfo, if imdb id found scrape and write new xml
+# 3. process file/path name if scrape success
+def import_movie(base_path, import_path, verbose=True, dry_run=True):
+    movie_data = None
+    dest_path = Path.joinpath(base_path, import_path.parts[-1])
+    shutil.move(src=import_path, dst=dest_path)
+    # scan all nfo/xml for imdb_id
+    xml = get_xml(dest_path)
+    if xml is None:
+        xml = nfo_process_path(dest_path)
+    if xml is None:
+        # nothing found
+        return None
+    else:
+        # grab imdbid from xml and scrape from tmdb
+        movie_imdb_id = get_xml_imdb_id(xml)
+        if movie_imdb_id is None:
+            # nothing found in xml....
+            return None
+        else:
+            movie_scraper = TmdbScraper()
+            movie_scraper.fetch_id(movie_imdb_id)
+            movie_year = ' (' + str(datetime.datetime.strptime(movie_scraper.movie_data['release_date'], '%Y-%m-%d').year) + ')'
+            movie_title = sanatized_string(movie_scraper.movie_data['title'] + movie_year)
+            # tree_element = element('movie', movie_scraper.movie_data)
+            # tree_root = et.ElementTree(element=tree_element)
+            # tree = minidom.Document()
+            dataelement = element('movie', movie_scraper.movie_data)
+            dd_element = minidom.parseString(et.tostring(dataelement))
+            # ddd = minidom.parseString(dd_element)
+            pretty_data = dd_element.toprettyxml(indent=' ', encoding='utf-8')
+            # jsondata = json.loads(dd_element)
+            xml_filename = Path.joinpath(dest_path, movie_title + '.xml')
+            if xml_filename.exists():
+                # target_xml = 
+                target_xml = str(xml_filename) +  '.' + str(randint(1, 99)) + '.olddata'
+                xml_filename.rename(target_xml)
+                # xml_filename = Path(str(target_xml))
+            with open(str(xml_filename), mode='wb') as f:
+                f.write(pretty_data)
+            movie_data = get_xml_moviedata(xml_filename)
+            return movie_data
 
-def import_movie(base_path, import_path, import_name, verbose=True, dry_run=True):
+def import_movie_old(base_path, import_path, import_name, verbose=True, dry_run=True):
     # import_path must only contain one movie
     # example: c:\incoming\new_movie_name\
     if verbose:
@@ -75,6 +121,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
     import_name = movie_path.parts[-1]
     movie_title = None
     movie_imdb_id = None
+    jsondata = None
     if verbose:
         print(f'import_process_path: {base_path} {movie_path}')
     xml = get_xml(movie_path)
@@ -84,7 +131,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         # xml = get_xml(movie_path)
         # get_nfo(movie_path)
     if xml is not None:
-        movie_title = get_xml_movie_title(xml)
+        # movie_title = get_xml_movie_title(xml)
         movie_imdb_id = get_xml_imdb_id(xml)
         if movie_imdb_id is not None:
             # print(f'import_process_path: scraping tmdb for {movie_imdb_id}')
@@ -99,8 +146,13 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
             dd_element = minidom.parseString(et.tostring(dataelement))
             # ddd = minidom.parseString(dd_element)
             pretty_data = dd_element.toprettyxml(indent=' ', encoding='utf-8')
-            xml_filename = str(Path.joinpath(movie_path, movie_title + '.xml'))
-            with open(xml_filename, mode='wb') as f:
+            # jsondata = json.loads(dd_element)
+            xml_filename = Path.joinpath(movie_path, movie_title + '.xml')
+            if xml_filename.exists():
+                # target_xml = 
+                target_xml = str(xml_filename) +  '.' + str(randint(1, 99)) + '.olddata'
+                xml_filename.rename(target_xml)
+            with open(str(xml_filename), mode='wb') as f:
                 f.write(pretty_data)
 
             # tree_root.write(xml_filename)
@@ -112,6 +164,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
         target_name = Path.joinpath(base_path, movie_title)
         print(f'import_process_path: rename {movie_path} to {target_name}')
         movie_path.rename(target_name)
+    # return jsondata
 
 
 def import_process_files(base_path, imported_movie_path, verbose=True, dry_run=True):
