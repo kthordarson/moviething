@@ -1,4 +1,3 @@
-
 from collections import defaultdict
 
 from lxml import etree
@@ -13,6 +12,7 @@ TYPE_MAP = dict(
 )
 
 NoneType = type(None)
+
 
 def etree_get_dchildren(children):
     dd = defaultdict(list)
@@ -43,7 +43,6 @@ def etree_to_dict(t):
     return d
 
 
-
 def element(k, v):
     """ key, val --> etree.Element(key)
     """
@@ -62,7 +61,8 @@ def element(k, v):
     elif isinstance(v, list):
         # node.set('type', type(v).__name__)  # list xx this could be done across the board.
         for cv in v:
-            node.append(element('item', cv))  # node.append(element("item", cv))  # node.append(element("_list_element_%d" % i, cv))
+            node.append(element('item',
+                                cv))  # node.append(element("item", cv))  # node.append(element("_list_element_%d" % i, cv))
     else:
         assert False
 
@@ -77,7 +77,7 @@ def value(e):
 
     typ = e.get('type')
     if children:
-        if not typ:             # xx defaults dict
+        if not typ:  # xx defaults dict
             return dict((c.tag, value(c)) for c in children)
         elif typ == 'list':
             return [value(c) for c in children]

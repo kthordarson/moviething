@@ -84,10 +84,6 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # Windows Installer files
-*.cab
-*.msi
-*.msm
-*.msp
 
 # Windows shortcuts
 *.lnk
@@ -126,8 +122,6 @@ Temporary Items
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
-*$py.class
 
 # C extensions
 *.so
@@ -148,7 +142,6 @@ var/
 wheels/
 *.egg-info/
 .installed.cfg
-*.egg
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

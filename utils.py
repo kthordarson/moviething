@@ -13,8 +13,8 @@ def who_called_func():
 
 def can_open_file(file):
     try:
-        #dest = Path(str(file) + '.tmp')
-        #Path.rename(file, dest)
+        # dest = Path(str(file) + '.tmp')
+        # Path.rename(file, dest)
         Path.rename(file, file)
         return True
     except Exception as e:
@@ -22,14 +22,15 @@ def can_open_file(file):
         # time.sleep(1)
         return False
 
+
 def can_open_path(path):
     try:
         for file in path.glob('*'):
             if file.suffix in VID_EXTENSIONS:
                 try:
-                    #dest = Path(str(file) + '.tmp')
-                    #Path.rename(file, dest)
-                    #Path.rename(dest, file)
+                    # dest = Path(str(file) + '.tmp')
+                    # Path.rename(file, dest)
+                    # Path.rename(dest, file)
                     Path.rename(file, file)
                     return True
                 except Exception as e:
@@ -39,6 +40,7 @@ def can_open_path(path):
         return True
     except:
         return False
+
 
 def xcan_open_file(file):
     # check if we can get handle

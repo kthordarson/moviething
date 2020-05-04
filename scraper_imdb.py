@@ -30,11 +30,11 @@ headers = {
 }
 
 
-def imdb_scrape_id(id, debug=False):
+def imdb_scrape_id(imdb_id, debug=False):
     # id is string with valid imdb id format: tt0000000
     # returns dict with movie info
     # data = dict()
-    url = base_url + id
+    url = base_url + imdb_id
     try:
         page = get(url, headers=headers_xml)
     except Exception as e:
@@ -50,14 +50,14 @@ def imdb_scrape_id(id, debug=False):
     try:
         if debug:
             return soup
-        data = parse_imdb_data(soup, id)
+        data = parse_imdb_data(soup, imdb_id)
         return data
     except Exception as e:
         print(f'imdb_scrape: err in scrape {e}')
         return None
 
 
-def parse_imdb_data(soup, id):
+def parse_imdb_data(soup, imdb_id):
     data = dict()
     movie_data = soup.find('div', class_='title_wrapper')
     title_year = movie_data.find('h1').text.replace('\xa0', ' ').strip()
@@ -67,9 +67,9 @@ def parse_imdb_data(soup, id):
                                                                                          '')  # .text.split('|'))
     rating, duration, genre, fulldate = [_.strip() for _ in info.split('|')]
     # print(f'title: {title_year}')
-    data['id'] = id
-    data['IMDbId'] = id
-    data['imdb_link'] = base_url + id
+    data['id'] = imdb_id
+    data['IMDbId'] = imdb_id
+    data['imdb_link'] = base_url + imdb_id
     data['title'] = title
     data['year'] = year
     data['title_year'] = title_year
@@ -81,9 +81,9 @@ def parse_imdb_data(soup, id):
     return data
 
 
-def scrape_by_id(imdbid, dest):
+def scrape_by_id(imdb_id, dest):
     # scrape id and save to dest
-    data_input = imdb_scrape_id(imdbid)
+    data_input = imdb_scrape_id(imdb_id)
     root = et.Element('movie')
     tree = et.ElementTree(element=root)
     root = tree.getroot()
@@ -119,17 +119,17 @@ def scrape_movie(movie):
     return new_data
 
 
-def imdb_debug(id):
+def imdb_debug(imdb_id):
     testfile = 'c:/Users/kthor/Documents/development/moviethingtesting/data/taxi_ff.html'
     with open(testfile, 'r') as f:
         testdata = f.read()
     soup = BeautifulSoup(testdata, 'html.parser')
-    data = parse_imdb_data(soup, id)
+    data = parse_imdb_data(soup, imdb_id)
     return data
 
 
-def dump_imdb_soup(id, dumpfile):
-    dump = imdb_scrape_id(id, debug=True)
+def dump_imdb_soup(imdb_id, dumpfile):
+    dump = imdb_scrape_id(imdb_id, debug=True)
     with open(dumpfile, 'wb') as f:
         f.write(dump.encode('utf-8'))
 

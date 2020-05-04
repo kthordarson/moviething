@@ -14,8 +14,8 @@ from defs import (
 from etree import etree_to_dict
 from stringutils import sanatized_string
 
-# noinspection PyUnresolvedReferences
 
+# noinspection PyUnresolvedReferences
 
 
 # from stringutils import sanatized_string
@@ -163,6 +163,7 @@ def get_xml_movie_title(xml_file):
     except:
         return None
 
+
 def get_xml_imdb_id(xml_file):
     # get imdb id from xml
     # movie_title = None
@@ -173,6 +174,7 @@ def get_xml_imdb_id(xml_file):
     except Exception as e:  # as e:
         print(f'get_xml_imdb_id: {xml_file} error {e}')
         return None
+
 
 def get_xml_imdb_link(xml_file):
     # get imdb link from xml

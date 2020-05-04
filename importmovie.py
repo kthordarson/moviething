@@ -90,7 +90,8 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
             # print(f'import_process_path: scraping tmdb for {movie_imdb_id}')
             movie_scraper = TmdbScraper()
             movie_scraper.fetch_id(movie_imdb_id)
-            movie_year = ' (' + str(datetime.datetime.strptime(movie_scraper.movie_data['release_date'], '%Y-%m-%d').year) + ')'
+            movie_year = ' (' + str(
+                datetime.datetime.strptime(movie_scraper.movie_data['release_date'], '%Y-%m-%d').year) + ')'
             movie_title = sanatized_string(movie_scraper.movie_data['title'] + movie_year)
             # tree_element = element('movie', movie_scraper.movie_data)
             # tree_root = et.ElementTree(element=tree_element)
@@ -99,7 +100,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
             dd_element = minidom.parseString(et.tostring(dataelement))
             # ddd = minidom.parseString(dd_element)
             pretty_data = dd_element.toprettyxml(indent=' ', encoding='utf-8')
-            xml_filename = str(Path.joinpath(movie_path, movie_title+'.xml'))
+            xml_filename = str(Path.joinpath(movie_path, movie_title + '.xml'))
             with open(xml_filename, mode='wb') as f:
                 f.write(pretty_data)
 
@@ -117,7 +118,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
 def import_process_files(base_path, imported_movie_path, verbose=True, dry_run=True):
     # clean unwanted files/samples
     # rename video file if needed
-    #if verbose:
+    # if verbose:
     #    print(f'import_process_path: {base_path} {imported_movie_path}')
     xml = get_xml(imported_movie_path)
     movie_title = get_xml_movie_title(xml)
@@ -136,7 +137,7 @@ def import_process_files(base_path, imported_movie_path, verbose=True, dry_run=T
                 print(f'import_process_files: rename error {e}')
 
         # v.suffix
-    #else:
+    # else:
     #    print(f'import_process_files: error in get movie_title path: {imported_movie_path}')
 
 

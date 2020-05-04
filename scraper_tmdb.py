@@ -9,9 +9,10 @@ HEADERS_XML = {
 }
 
 HEADERS = {
-    "Accept-Language" : "en-US,en;q=0.5",
-    "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0",
+    "Accept-Language": "en-US,en;q=0.5",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0",
 }
+
 
 class TmdbScraper(object):
     # https://api.themoviedb.org/3/movie/<id>?api_key=<apikey>&language=en-US
@@ -33,6 +34,7 @@ class TmdbScraper(object):
         except Exception as e:
             print(f'tmdb_scrape: err in get {e}')
             return None
+
     def parse_data(self, pagedata):
         # todo do stuff with data
         return pagedata
@@ -40,12 +42,13 @@ class TmdbScraper(object):
     def fetch_id(self, tmdb_id):
         self.movie_data = self.parse_data(self.request(tmdb_id))
 
+
 if __name__ == '__main__':
     print('scraper_tmdb')
     # test_scraper = TmdbScraper()
     # test_scraper.fetch_id('tt0152930')
     # print(test_scraper.movie_data)
     # print(foo['title'])
-    #[print(f't: {t} v: {foo[t]}') for t in foo]
-    #tmdb_tags = [k for k in foo]
-    #print(tmdb_tags)
+    # [print(f't: {t} v: {foo[t]}') for t in foo]
+    # tmdb_tags = [k for k in foo]
+    # print(tmdb_tags)
