@@ -218,3 +218,5 @@ ENV/
 .mypy_cache/
 settings.ini
 tmdb.ini
+apitest.txt
+testclass.py
