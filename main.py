@@ -45,8 +45,7 @@ def main_program():
     # dry_run = args.dryrun
     threads = list()
     monitor_q = Queue()
-    main_thread = MainThread(name='MainThread', monitor_q=monitor_q, base_path=Path(BASE_PATH), verbose=args.verbose,
-                             dry_run=args.dryrun)
+    main_thread = MainThread(name='MainThread', monitor_q=monitor_q, base_path=Path(BASE_PATH), verbose=args.verbose, dry_run=args.dryrun)
     threads.append(main_thread)
     monitor_thread = Monitor(name='Monitor', monitor_q=monitor_q, monitor_path=Path(MONITOR_PATH))
     threads.append(monitor_thread)
@@ -88,10 +87,8 @@ def main_program():
 
 def get_args():
     parser = argparse.ArgumentParser(description="moviething")
-    parser.add_argument("--dryrun", action="store_true",
-                        help="Dry run - no changes to filesystem")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Verbose output")
+    parser.add_argument("--dryrun", action="store_true", help="Dry run - no changes to filesystem")
+    parser.add_argument("--verbose", action="store_true", help="Verbose output")
 
     return parser.parse_args()
 

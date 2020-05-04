@@ -29,8 +29,7 @@ def get_hash(name):
 def request_subtitile(film_hash):
 
     url = "http://api.thesubdb.com/?action=search&hash={}".format(film_hash)
-    header = {
-        "user-agent": "SubDB/1.0 (SubGrabber/1.0; https://github.com/kthordarson/SubGrabber.git)"}
+    header = {"user-agent": "SubDB/1.0 (SubGrabber/1.0; https://github.com/kthordarson/SubGrabber.git)"}
     req = requests.get(url, headers=header)
     print(f'http status {req.status_code}')
     if req.status_code == 200:
@@ -52,17 +51,17 @@ def write_srt(data, file):
 
 
 def thesubdb_grabber():
-    files = ["d:/movies/Terminator.(1984).H264.Ita.Eng.Ac3.5.1.sub.ita.eng.[BaMax71].mkv",
-             "d:/movies/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena.mp4"]
+    files = [
+        "d:/movies/Terminator.(1984).H264.Ita.Eng.Ac3.5.1.sub.ita.eng.[BaMax71].mkv",
+        "d:/movies/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena/A Clockwork Orange 1971 720p BluRay x264 AC3 - Ozlem Hotpena.mp4",
+    ]
     for file in files:
         film_hash = get_hash(name=file)
         if request_subtitile(film_hash):
-            url = "http://api.thesubdb.com/?action=download&hash={}&language=en".format(
-                film_hash)
-            header = {
-                "user-agent": "SubDB/1.0 (SubGrabber/1.0; https://github.com/kthordarson/SubGrabber.git)"}
+            url = "http://api.thesubdb.com/?action=download&hash={}&language=en".format(film_hash)
+            header = {"user-agent": "SubDB/1.0 (SubGrabber/1.0; https://github.com/kthordarson/SubGrabber.git)"}
             req = requests.get(url, headers=header)
             if req.status_code == 200:
-                write_srt(req.content,  file)
+                write_srt(req.content, file)
             else:
                 print(f"Error {req.status_code}")

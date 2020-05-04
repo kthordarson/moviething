@@ -6,9 +6,9 @@ from xml.dom import minidom
 from lxml import etree as et
 
 from etree import element
+
 # from ffprobe import get_ffprobe
-from nfoparser import (get_xml, get_xml_imdb_id, get_xml_movie_title,
-                       nfo_process_path)
+from nfoparser import get_xml, get_xml_imdb_id, get_xml_movie_title, nfo_process_path
 from scraper_tmdb import TmdbScraper
 from stringutils import sanatized_string
 from utils import get_video_filelist
@@ -90,8 +90,7 @@ def import_process_path(base_path, movie_path, verbose=True, dry_run=True):
             # print(f'import_process_path: scraping tmdb for {movie_imdb_id}')
             movie_scraper = TmdbScraper()
             movie_scraper.fetch_id(movie_imdb_id)
-            movie_year = ' (' + str(
-                datetime.datetime.strptime(movie_scraper.movie_data['release_date'], '%Y-%m-%d').year) + ')'
+            movie_year = ' (' + str(datetime.datetime.strptime(movie_scraper.movie_data['release_date'], '%Y-%m-%d').year) + ')'
             movie_title = sanatized_string(movie_scraper.movie_data['title'] + movie_year)
             # tree_element = element('movie', movie_scraper.movie_data)
             # tree_root = et.ElementTree(element=tree_element)

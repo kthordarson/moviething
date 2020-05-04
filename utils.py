@@ -113,8 +113,8 @@ def get_video_filelist(movie_path, verbose=True):
     if len(filelist) == 1:
         return filelist[0]
     else:
-        if verbose:
-            print(f'No videos in {movie_path}')
+        # if verbose:
+        #     print(f'No videos in {movie_path}')
         return None
 
 

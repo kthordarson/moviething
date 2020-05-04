@@ -25,7 +25,7 @@ VALID_INPUT_STRING_CHARS = "-_.() %s%s" % (string.ascii_letters, string.digits)
 VALID_TAG_CHARS = "-_.() :/%s%s" % (string.ascii_letters, string.digits)
 VALID_XML_CHARS = "-_.()%s%s" % (string.ascii_letters, string.digits)
 CHAR_LIMIT = 255
-
+# fmt: off
 MEDIAINFO_TAGS = [
     'aspect', 'audio bit rate', 'audio bit rate mode', 'audio channel positions', 'audio channel(s)',
     'audio channel(s)_original',
@@ -137,6 +137,6 @@ UNWANTED_FILES = dict(
     images=("www.yify-torrents.com.jpg", "screenshot", "www.yts.am.jpg"),
     videos=("rarbg.com.mp4", "sample")
 )
-
+# fmt: on
 if __name__ == '__main__':
     print('defs')

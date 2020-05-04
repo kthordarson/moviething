@@ -2,14 +2,7 @@ from collections import defaultdict
 
 from lxml import etree
 
-TYPE_MAP = dict(
-    int=int,
-    bytes=bytes,
-    NoneType=lambda x: None,
-    list=list,
-    bool=bool,
-    str=str,
-)
+TYPE_MAP = dict(int=int, bytes=bytes, NoneType=lambda x: None, list=list, bool=bool, str=str,)
 
 NoneType = type(None)
 
@@ -28,11 +21,9 @@ def etree_to_dict(t):
     children = list(t)
     if children:
         dd = etree_get_dchildren(children)
-        d = {t.tag: {k: v[0] if len(v) == 1 else v
-                     for k, v in dd.items()}}
+        d = {t.tag: {k: v[0] if len(v) == 1 else v for k, v in dd.items()}}
     if t.attrib:
-        d[t.tag].update((k, v)  # d[t.tag].update(('@' + k, v)
-                        for k, v in t.attrib.items())
+        d[t.tag].update((k, v) for k, v in t.attrib.items())  # d[t.tag].update(('@' + k, v)
     if t.text:
         text = t.text.strip()
         if children or t.attrib:
@@ -61,8 +52,7 @@ def element(k, v):
     elif isinstance(v, list):
         # node.set('type', type(v).__name__)  # list xx this could be done across the board.
         for cv in v:
-            node.append(element('item',
-                                cv))  # node.append(element("item", cv))  # node.append(element("_list_element_%d" % i, cv))
+            node.append(element('item', cv))  # node.append(element("item", cv))  # node.append(element("_list_element_%d" % i, cv))
     else:
         assert False
 

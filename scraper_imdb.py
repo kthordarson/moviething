@@ -1,6 +1,7 @@
 # imdb scraper
 from lxml import html
 from lxml import etree as et
+
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
 from io import StringIO, BytesIO
@@ -63,8 +64,7 @@ def parse_imdb_data(soup, imdb_id):
     title_year = movie_data.find('h1').text.replace('\xa0', ' ').strip()
     # title_year = title_year.replace('\xa0', ' ')
     title, year = [_.strip('() ') for _ in title_year_regex.search(title_year).groups()]
-    info = unicodedata.normalize("NFKD", movie_data.find(class_='subtext').text).replace(replace_break,
-                                                                                         '')  # .text.split('|'))
+    info = unicodedata.normalize("NFKD", movie_data.find(class_='subtext').text).replace(replace_break, '')  # .text.split('|'))
     rating, duration, genre, fulldate = [_.strip() for _ in info.split('|')]
     # print(f'title: {title_year}')
     data['id'] = imdb_id
@@ -94,8 +94,7 @@ def scrape_by_id(imdb_id, dest):
     data = et.tostring(tree.getroot(), method='xml')
     dataout = minidom.parseString(data)
     pretty_data = dataout.toprettyxml(indent=' ')
-    result_file = Path.joinpath(dest, data_input[
-        'title_year'] + '.xml')  # 'testingstuff/' + data_input['title_year'] + '.xml'
+    result_file = Path.joinpath(dest, data_input['title_year'] + '.xml')  # 'testingstuff/' + data_input['title_year'] + '.xml'
     # result_file = 'c:/Users/kthor/Documents/development/moviething/testingstuff/taxi_ff.html.xml'
     with open(result_file, mode='w') as f:
         f.write(pretty_data)

@@ -8,9 +8,7 @@ from xml.dom import minidom
 
 from lxml import etree as et
 
-from defs import (
-    IMDB_REGEX, MEDIAINFO_REGEX, MEDIAINFO_TAGS, VALID_TAG_CHARS,
-    VALID_XML_CHARS, XML_TYPE_LIST)
+from defs import IMDB_REGEX, MEDIAINFO_REGEX, MEDIAINFO_TAGS, VALID_TAG_CHARS, VALID_XML_CHARS, XML_TYPE_LIST
 from etree import etree_to_dict
 from stringutils import sanatized_string
 
@@ -30,8 +28,7 @@ def get_xml_data(file):
         #        tree = et.parse(file)
         #        root = tree.getroot()
         #        xml_data = etree_to_dict(root)
-        return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(
-            et.parse(str(file)).getroot()).get('Title') or None
+        return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(et.parse(str(file)).getroot()).get('Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
@@ -104,7 +101,7 @@ def get_xml(movie_path):
     # print(f'get_xml {movie_path}')
     # print(f'get_xml: caller {who_called_func()}')
     # xml = [xml for xml in movie_path.glob('*.xml')]
-    xml = ([xml for xml in movie_path.glob('*.xml')] or None)
+    xml = [xml for xml in movie_path.glob('*.xml')] or None
     if xml is None:
         return None
     if len(xml) == 1 and is_valid_xml(xml[0]):

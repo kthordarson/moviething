@@ -9,5 +9,5 @@ setup(
     license='GNU',
     author='kthordarson',
     author_email='kthordarson@gmail.com',
-    description='a thing to manage my movie collection'
+    description='a thing to manage my movie collection',
 )

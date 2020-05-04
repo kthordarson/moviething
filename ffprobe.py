@@ -7,14 +7,13 @@ from xml.dom import minidom
 # from lxml import etree as et
 
 
-class FFProbe():
+class FFProbe:
     def __init__(self, filename):
         self.filename = filename
 
     def parse(self):
         if str(platform.system() == 'Windows'):
-            cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-pretty', '-v', 'quiet',
-                   self.filename]
+            cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-pretty', '-v', 'quiet', self.filename]
         else:
             cmd = ["ffprobe -show_streams -print_format xml -pretty -v quiet", self.filename]
         out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
