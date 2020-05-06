@@ -22,7 +22,7 @@ class TmdbScraper(object):
         self.themoviedbapikey = config['moviethingsettings']['themoviedbapikey']
         self.movie_data = None
 
-    def request(self, tmdb_id):
+    def request_id(self, tmdb_id):
         url = 'https://api.themoviedb.org/3/movie/%s?api_key=%s&language=en-US' % (tmdb_id, self.themoviedbapikey)
         #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US
         #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78
@@ -40,15 +40,42 @@ class TmdbScraper(object):
         return pagedata
 
     def fetch_id(self, tmdb_id):
-        self.movie_data = self.parse_data(self.request(tmdb_id))
+        self.movie_data = self.parse_data(self.request_id(tmdb_id))
+
+    def search(self, query, year):
+        result = None
+        # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US&query=Princess%20Mononoke&page=1&include_adult=false&year=1997
+        
+        #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US
+        #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78
+        try:
+            query = query.replace(' ', '%20')
+            url = 'https://api.themoviedb.org/3/search/movie?api_key=%s&language=en-US&query=%s&page=1&include_adult=false&year=%s' % (self.themoviedbapikey, query, year)
+            print(f'TmdbScraper: search {query} {year}')
+            print(f'TmdbScraper: request to tmdb url: {url}')
+            pagedata = get(url, headers=HEADERS_XML).content
+            return json.loads(pagedata)
+            # todo convert to xml https://github.com/nicklasb/py-json-lxml/blob/master/json_lxml.py
+        except Exception as e:
+            print(f'tmdb_scrape: err in get {e}')
+            return None
+        return result
 
 
 if __name__ == '__main__':
     print('scraper_tmdb')
+    with open('apitest2.json', 'r') as f:
+        jsonraw = f.read()
+    jsondata = json.loads(jsonraw)
+    print(jsondata)
     # test_scraper = TmdbScraper()
-    # test_scraper.fetch_id('tt0152930')
+    # search = test_scraper.search(query='The Witch', year='2015')  # The Witch (2015)
+    # print(search)
     # print(test_scraper.movie_data)
     # print(foo['title'])
     # [print(f't: {t} v: {foo[t]}') for t in foo]
     # tmdb_tags = [k for k in foo]
     # print(tmdb_tags)
+ # https://api.themoviedb.org/3/movie/?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
+ # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
+ # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US&query=The%20Witch&page=1&include_adult=false&year=2015

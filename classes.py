@@ -1,4 +1,5 @@
 # classes
+import concurrent.futures
 import json
 import time
 from datetime import datetime
@@ -31,6 +32,7 @@ class MainThread(Thread):
         self.xml_list = []
 
     def run(self):
+        
         if self.verbose:
             print(f'MainThread: {self.name} starting bp: {self.base_path}')
         self.folder_list = get_folders(self.base_path)
@@ -44,9 +46,11 @@ class MainThread(Thread):
                 q_item = self.monitor_q.get_nowait()
                 # new_movie = self.monitor_q.get_nowait()
                 if q_item[0] == 'f':
+                    
+                    # new_movie.append(q_item[1])
                     new_movie = q_item[1]
-                    # print(f'new_movie found: {new_movie}')
                     self.import_from_path(new_movie)
+                    # print(f'new_movie found: {new_movie}')
                     # self.grab_folder(new_movie)
                     # q_item.update
                     self.monitor_q.task_done()
@@ -55,6 +59,9 @@ class MainThread(Thread):
                 if q_item[0] == 's':
                     pass
             except Empty:
+                # with concurrent.futures.ThreadPoolExecutor() as executor:
+                #     ttp_res = executor.map(self.import_from_path, new_movie)
+                # new_movie = []
                 # print(f'q empty')
                 # time.sleep(0.5)
                 pass
@@ -152,8 +159,12 @@ class MainThread(Thread):
             movie_data = import_movie(self.base_path, import_path, self.verbose, self.dry_run)
             if movie_data:
                 movie = MovieClass(movie_data=movie_data, movie_path=import_path)
+                self.movie_list.append(movie)
+                return True
+                # print(f'import_from_path: {type(movie_data)} {len(movie_data)}')
             else:
                 print(f'import_from_path: got no movie_data from {import_path}')
+                return False
 
     def scrape(self, imdbid):
         pass

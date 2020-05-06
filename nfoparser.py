@@ -122,7 +122,7 @@ def get_xml(movie_path):
         result_filename = Path.joinpath(movie_path, movie_path.parts[-1]+'.xml')
         for f in xml:
             try:
-                f_target = str(f) + '.' + str(randint(1, 99)) + '.olddata'
+                f_target = str(f) + '.' + str(randint(100, 999)) + '.olddata'
                 f.rename(f_target)
             except Exception as e:
                 print(f'get_xml ERR {e} while renaming old xml')
@@ -274,7 +274,7 @@ def nfo_to_xml(nfo):
     result_file = Path.joinpath(nfo.parent, nfo.parts[-2] + '.xml')  # nfo + '.xml'
     if Path(result_file).exists():
         # rename
-        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(1, 99)) +  '.olddata')
+        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(100, 999)) +  '.olddata')
         try:
             result_file.rename(target)
         except Exception as e:
@@ -283,7 +283,7 @@ def nfo_to_xml(nfo):
         with open(result_file, mode='w') as f:
             f.write(pretty_data)
         # rename old nfo
-        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(1, 99)) + '.nfo.olddata')
+        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(100, 999)) + '.nfo.olddata')
     except Exception as e:
         print(f'nfo_to_xml: save error {e}')
 

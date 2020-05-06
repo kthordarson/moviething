@@ -5,24 +5,6 @@ from xml.dom import minidom
 
 # from lxml import etree as et
 
-
-class FFProbe:
-    def __init__(self, filename):
-        self.filename = filename
-
-    def parse(self):
-        if str(platform.system() == 'Windows'):
-            cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-pretty', '-v', 'quiet', self.filename]
-        else:
-            cmd = ["ffprobe -show_streams -print_format xml -pretty -v quiet", self.filename]
-        out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-        print(len(out), len(err))
-        # print(f'o {len(out)}')
-        # print(f'e {len(err)}')
-        # root = et.ElementTree(et.fromstring(out)).getroot()
-        # root = tree.getroot()
-
-
 def get_ffprobe(filename):
     if str(platform.system() == 'Windows'):
         cmd = ["ffprobe", "-show_streams", '-print_format', 'xml', '-pretty', '-v', 'quiet', str(filename)]
