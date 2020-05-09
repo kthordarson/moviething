@@ -67,7 +67,11 @@ if __name__ == '__main__':
     with open('apitest2.json', 'r') as f:
         jsonraw = f.read()
     jsondata = json.loads(jsonraw)
-    print(jsondata)
+    for res in jsondata['results']:
+        print(f'Title: {res["title"]}')
+        print(f'\tID: {res["id"]}')
+        print(f'\tDate: {res["release_date"]}')
+        print(f'\tOverview: {res["overview"]}')
     # test_scraper = TmdbScraper()
     # search = test_scraper.search(query='The Witch', year='2015')  # The Witch (2015)
     # print(search)
