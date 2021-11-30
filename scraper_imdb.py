@@ -1,18 +1,13 @@
 # imdb scraper
-from lxml import html
-from lxml import etree as et
+import re
+import unicodedata
+from pathlib import Path
 
+from bs4 import BeautifulSoup
+from lxml import etree as et
+from requests import get
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
-from io import StringIO, BytesIO
-from bs4 import BeautifulSoup
-import unicodedata
-import re
-import os
-from requests import get
-import time
-import random
-from pathlib import Path
 
 nonBreakSpace = u'\xa0'
 strip_chars = ' \n'

@@ -1,13 +1,8 @@
-import os
-import re
-import time
 import hashlib
-import requests
-import platform
-import sys
-import codecs
-import unidecode
+import os
 from pathlib import Path
+
+import requests
 
 languages = {
     "en": "English",

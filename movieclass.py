@@ -10,9 +10,10 @@ class Genre:
     def __init__(self, id: int, name: str) -> None:
         self.id = id
         self.name = name
-    
+
     def get_name(self):
         return self.name
+
     def get_id(self):
         return self.id
 
@@ -23,7 +24,7 @@ class ProductionCompany:
     name: str
     origin_country: str
 
-    def __init__(self, id: int, logo_path: Optional[str], name: str, origin_country: str) -> None: 
+    def __init__(self, id: int, logo_path: Optional[str], name: str, origin_country: str) -> None:
         self.id = id
         self.logo_path = logo_path
         self.name = name
@@ -31,8 +32,10 @@ class ProductionCompany:
 
     def get_name(self):
         return self.name
+
     def get_id(self):
         return self.id
+
 
 class ProductionCountry:
     iso_3166_1: str
@@ -44,8 +47,10 @@ class ProductionCountry:
 
     def get_name(self):
         return self.name
+
     def get_id(self):
         return self.id
+
 
 class SpokenLanguage:
     iso_639_1: str
@@ -57,8 +62,10 @@ class SpokenLanguage:
 
     def get_name(self):
         return self.name
+
     def get_id(self):
         return self.id
+
 
 class Movie:
     adult: bool
@@ -87,7 +94,11 @@ class Movie:
     vote_average: float
     vote_count: int
 
-    def __init__(self, adult = False, backdrop_path = '' , belongs_to_collection = [], budget = 0 , genres = [], homepage = '' , id= 0 , imdb_id = '' , original_language = '' , original_title = '' , overview = '' , popularity = 0, poster_path = '' , production_companies = [], production_countries = [], release_date = None, revenue= 0 , runtime= 0 , spoken_languages = [], status= '' , tagline= '' , title= '' , video = False, vote_average = 0, vote_count= 0 ) -> None:
+    def __init__(self, adult=False, backdrop_path='', belongs_to_collection=[], budget=0, genres=[], homepage='', id=0,
+                 imdb_id='', original_language='', original_title='', overview='', popularity=0, poster_path='',
+                 production_companies=[], production_countries=[], release_date=None, revenue=0, runtime=0,
+                 spoken_languages=[], status='', tagline='', title='', video=False, vote_average=0,
+                 vote_count=0) -> None:
         self.adult = adult
         self.backdrop_path = backdrop_path
         self.belongs_to_collection = belongs_to_collection
@@ -116,6 +127,7 @@ class Movie:
 
     def get_name(self):
         return self.name
+
     def get_id(self):
         return self.id
 

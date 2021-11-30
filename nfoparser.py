@@ -15,6 +15,7 @@ from defs import (
 from etree import etree_to_dict
 from stringutils import sanatized_string
 
+
 # noinspection PyUnresolvedReferences
 
 
@@ -30,10 +31,12 @@ def get_xml_data(file):
         #        tree = et.parse(file)
         #        root = tree.getroot()
         #        xml_data = etree_to_dict(root)
-        return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(et.parse(str(file)).getroot()).get('Title') or None
+        return etree_to_dict(et.parse(str(file)).getroot()).get('movie') or etree_to_dict(
+            et.parse(str(file)).getroot()).get('Title') or None
     except Exception as e:
         print(f'ERROR: get_xml_data {file} {e}')
         return None
+
 
 def get_xml_moviedata(file):
     # read xml data from file, convert to dict and return dict with parsed movie info
@@ -41,6 +44,7 @@ def get_xml_moviedata(file):
     root = et.parse(str(file)).getroot()
     data = etree_to_dict(root)
     return data['movie']
+
 
 def get_xml_score(xml_file):
     # todo need to fix this...
@@ -119,7 +123,7 @@ def get_xml(movie_path):
         print(f'Multiple xml found in {movie_path}')
         newxml = combine_xml(xml)
         result = et.ElementTree(element=newxml.getroot())
-        result_filename = Path.joinpath(movie_path, movie_path.parts[-1]+'.xml')
+        result_filename = Path.joinpath(movie_path, movie_path.parts[-1] + '.xml')
         for f in xml:
             try:
                 f_target = str(f) + '.' + str(randint(100, 999)) + '.olddata'
@@ -177,7 +181,7 @@ def get_xml_imdb_id(xml_file):
     try:
         root = et.parse(str(xml_file)).getroot()
         result = [tag.text for tag in root if 'id' in tag.tag.lower()]
-        return result[0]  if len(result) >= 1 else None # root.find('id').text
+        return result[0] if len(result) >= 1 else None  # root.find('id').text
     except Exception as e:  # as e:
         print(f'get_xml_imdb_id: {xml_file} error {e}')
         return None
@@ -274,7 +278,7 @@ def nfo_to_xml(nfo):
     result_file = Path.joinpath(nfo.parent, nfo.parts[-2] + '.xml')  # nfo + '.xml'
     if Path(result_file).exists():
         # rename
-        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(100, 999)) +  '.olddata')
+        target = Path.joinpath(nfo.parent, nfo.parts[-2] + '.' + str(randint(100, 999)) + '.olddata')
         try:
             result_file.rename(target)
         except Exception as e:
