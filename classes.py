@@ -1,20 +1,13 @@
 # classes
-import concurrent.futures
-import json
-import time
-from datetime import datetime
-from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread, active_count
-from typing import List, Optional
 
 from importmovie import (
-    import_check_path, import_movie, import_process_files, import_process_path)
+    import_check_path, import_movie)
 from movieclass import Movie
-from nfoparser import check_xml, get_xml, get_xml_data, get_xml_moviedata
+from nfoparser import check_xml, get_xml
 # from scraper_imdb import scrape_by_id, scrape_movie
-from scraper_tmdb import TmdbScraper
-from utils import get_folders, get_folders_non_empty, get_video_filelist
+from utils import get_folders, get_folders_non_empty
 
 
 class MainThread(Thread):

@@ -45,12 +45,13 @@ class TmdbScraper(object):
     def search(self, query, year):
         result = None
         # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US&query=Princess%20Mononoke&page=1&include_adult=false&year=1997
-        
+
         #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US
         #  https://api.themoviedb.org/3/movie/tt0152930?api_key=0d8017b2a539fb2b314f25ace5e9aa78
         try:
             query = query.replace(' ', '%20')
-            url = 'https://api.themoviedb.org/3/search/movie?api_key=%s&language=en-US&query=%s&page=1&include_adult=false&year=%s' % (self.themoviedbapikey, query, year)
+            url = 'https://api.themoviedb.org/3/search/movie?api_key=%s&language=en-US&query=%s&page=1&include_adult=false&year=%s' % (
+                self.themoviedbapikey, query, year)
             print(f'TmdbScraper: search {query} {year}')
             print(f'TmdbScraper: request to tmdb url: {url}')
             pagedata = get(url, headers=HEADERS_XML).content
@@ -80,6 +81,6 @@ if __name__ == '__main__':
     # [print(f't: {t} v: {foo[t]}') for t in foo]
     # tmdb_tags = [k for k in foo]
     # print(tmdb_tags)
- # https://api.themoviedb.org/3/movie/?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
- # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
- # https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US&query=The%20Witch&page=1&include_adult=false&year=2015
+# https://api.themoviedb.org/3/movie/?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
+# https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US?query=The%20Witch&page=1&include_adult=false&year=2015
+# https://api.themoviedb.org/3/search/movie?api_key=0d8017b2a539fb2b314f25ace5e9aa78&language=en-US&query=The%20Witch&page=1&include_adult=false&year=2015

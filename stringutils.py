@@ -1,6 +1,6 @@
 import unicodedata
 
-from defs import CHAR_LIMIT, VALID_INPUT_STRING_CHARS, VALID_TAG_CHARS
+from defs import CHAR_LIMIT, VALID_INPUT_STRING_CHARS
 
 
 def sanatized_string(input_string, whitelist=VALID_INPUT_STRING_CHARS, replace='', s_format='NFKD'):
